@@ -134,9 +134,9 @@ void laser_exe()
   laser_side.distance = laser_calculate_distance(&laser_side, &kal_distance_S, &kal_adc_S) + ERROR_ON_SIDE;
 
   // 坐标系定义为水平向左为x轴正方向，垂直向上为y轴正方向
-  BaseChassis.posture_status.laser_pos_yaw = laser_calculate_angle(); // 需要首先计算偏航角以供x和y换算，是与x轴的夹角
-  BaseChassis.posture_status.laser_pos_x = laser_calculate_x();
-  BaseChassis.posture_status.laser_pos_y = laser_calculate_y();
+  BaseChassis.PostureStatus.laser_pos_yaw = laser_calculate_angle(); // 需要首先计算偏航角以供x和y换算，是与x轴的夹角
+  BaseChassis.PostureStatus.laser_pos_x = laser_calculate_x();
+  BaseChassis.PostureStatus.laser_pos_y = laser_calculate_y();
 
 }
 
@@ -157,9 +157,9 @@ void Laser_PrintPos()
     return;
   }
   // uprintf("--Laser pos:\r\n");
-  uprintf("  Laser_X:%6fm", BaseChassis.posture_status.laser_pos_x);
-  uprintf("  Laser_Y:%6fm", BaseChassis.posture_status.laser_pos_y);
-  uprintf("  Laser_Angle:%6f\r\n", BaseChassis.posture_status.laser_pos_yaw);
+  uprintf("  Laser_X:%6fm", BaseChassis.PostureStatus.laser_pos_x);
+  uprintf("  Laser_Y:%6fm", BaseChassis.PostureStatus.laser_pos_y);
+  uprintf("  Laser_Angle:%6f\r\n", BaseChassis.PostureStatus.laser_pos_yaw);
 }
 
 int Laser_PrintADCValue_Flag = 0;

@@ -43,9 +43,9 @@ extern "C"
     //=================================函数声明=================================
 
     void Handle_Init();
-    void Handle_Button(can_msg *data);
-    void Handle_Rocker(can_msg *data);
-    void Handle_EXE();
+    void Handle_Button(CANMsg *data);
+    void Handle_Rocker(CANMsg *data);
+    void Handle_Exe();
     void Handle_PrintRockerStatus();
     float Handle_RockerMapping(uint16_t amplitude, uint8_t max_amplitude, float max_val, float y0);
 #ifdef __cplusplus

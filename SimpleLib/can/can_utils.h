@@ -27,30 +27,30 @@ typedef union{
     int in[2];
     float fl[2];
     double df;
-} can_msg;
+} CANMsg;
 
 extern CAN_HandleTypeDef HCAN;
 extern CAN_TxHeaderTypeDef TxHeader;
 extern CAN_RxHeaderTypeDef RxHeader;
 extern CAN_TxHeaderTypeDef ExtTxHeader;
 extern uint32_t TxMailbokx;
-extern can_msg can_rx_data;
-extern can_msg can_tx_data;
+extern CANMsg can_rx_data;
+extern CANMsg can_tx_data;
 extern int can_exc_callback_flag;
 extern int can_rx_callback_flag;
 
-void can_init(CAN_HandleTypeDef *hcan);
-int can_send_msg(uint16_t id, can_msg *msg);
-int can_ext_send_msg(uint32_t id, can_msg *msg);
-void can_callback_add(const uint32_t id, void (*callback)(can_msg *data));
-void can_exe_callback(void);
+void CAN_Init(CAN_HandleTypeDef *hcan);
+int CAN_SendMsg(uint16_t id, CANMsg *msg);
+int CAN_SendExtMsg(uint32_t id, CANMsg *msg);
+void CAN_CallbackAdd(const uint32_t id, void (*callback)(CANMsg *data));
+void CAN_CallbackExe(void);
 void can_std_mask_filter_conf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_t len, uint32_t bank_num);
 void can_std_list_filter_conf(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t bank_num);
 void can_send_test(void);
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
 void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan);
-void can_rx_callback(can_msg *data);
+void CAN_RxCallback(CANMsg *data);
 
 #ifdef DEBUG
 void can_send_test(void);

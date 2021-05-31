@@ -168,7 +168,7 @@ void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len)
     }
 
 #if VESC_CAN_ENABLE
-    can_ext_send_msg(id, (can_msg *)data); //须改为自己的can发送函数，拓展帧
+    CAN_SendExtMsg(id, (CANMsg *)data); //须改为自己的can发送函数，拓展帧
 #else
     (void)id;
     (void)data;
@@ -184,7 +184,7 @@ void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len)
     }
 
 #if VESC_CAN_ENABLE
-    can_send_msg((uint16_t)id, (can_msg *)data); //须改为自己的can发送函数，标准帧
+    CAN_SendMsg((uint16_t)id, (CANMsg *)data); //须改为自己的can发送函数，标准帧
 #else
     (void)id;
     (void)data;

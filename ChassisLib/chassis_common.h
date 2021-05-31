@@ -5,11 +5,6 @@
 #include "utils.h"
 #include "point.h"
 
-// ===========================选择底盘类型===============================
-#define USE_OMNI_CHASSIS
-// #define USE_RUDDER_CHASSIS
-// #define USE_MECANUM_CHASSIS
-
 typedef enum CHASSIS_POS_MODE
 {
     POS_MODE_RELATIVE = 0,
@@ -54,13 +49,20 @@ typedef struct TrackStatus_t // 轨迹跟踪状态结构体
     int points_set_index; // 点集序号->当前跑第几个点
 } TrackStatus_t;
 
+typedef struct CMD_Vel_t
+{
+    float speed;
+    float dir;
+    float omega;
+} CMD_Vel_t; // 类似ROS中的/cmd_vel
+
 typedef struct BaseChassis_t
 {
     float target_speed;
     float target_dir;
     float target_omega;
-    PostureStatus_t posture_status;
-    TrackStatus_t track_status;
+    PostureStatus_t PostureStatus;
+    TrackStatus_t TrackStatus;
     CHASSIS_POS_MODE pos_mode;
     CHASSIS_CTRL_MODE ctrl_mode;
     void (*fChassisMove)(float target_speed, float target_dir, float target_omega);
@@ -81,9 +83,18 @@ void Chassis_TrackPathSets(int index);
 void Chassis_ResetTrackStatus();
 void PrintChassisStatus();
 void PrintTargetStatus();
-void Chassis_Init();
+void BaseChassis_Init();
 void Chassis_PostureStatusInit();
 void Chassis_TrackStatusInit();
-void SW_UpdatePostureStatus();
+void Chassis_UpdatePostureStatus();
+void Chassis_YawTuning(float target_yaw);
+void Chassis_MotionCtrl(void);
+
+extern BaseChassis_t BaseChassis;
+extern float CMD_TargetSpeed;
+extern float CMD_TargetDir;
+extern float CMD_TargetOmega;
+extern float CMD_TargetYaw;
+extern char YawTuning_Start;
 
 #endif

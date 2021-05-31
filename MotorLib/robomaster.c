@@ -15,7 +15,7 @@ int RM_RPMControl_Flag = 0;
 int RM_PosControl_Flag = 0;
 
 /*接收1号电调发送的反馈CAN消息*/
-void can_robomaster_rcv_1(can_msg *pRxMsg)
+void can_robomaster_rcv_1(CANMsg *pRxMsg)
 {
   //pRxMsg->StdId
   static int first_flag = 1;
@@ -46,7 +46,7 @@ void can_robomaster_rcv_1(can_msg *pRxMsg)
 }
 
 /*接收2号电调发送的反馈CAN消息*/
-void can_robomaster_rcv_2(can_msg *pRxMsg)
+void can_robomaster_rcv_2(CANMsg *pRxMsg)
 {
   //pRxMsg->StdId
   //锟斤拷锟斤拷id锟斤拷没锟斤拷
@@ -146,12 +146,12 @@ void robomaster_set_current(int16_t iq1, int16_t iq2, int16_t iq3, int16_t iq4)
   Data[5] = iq3;
   Data[6] = iq4 >> 8;
   Data[7] = iq4;
-  can_msg dji_data;
+  CANMsg dji_data;
   for (int i = 0; i <= 7; i++)
   {
     dji_data.ui8[i] = Data[i];
   }
-  can_send_msg(0x200, &dji_data); // 前4个电机的can_id为0x200
+  CAN_SendMsg(0x200, &dji_data); // 前4个电机的can_id为0x200
 }
 
 /**
@@ -215,32 +215,32 @@ void M2006_init(int id)
 {
   reset_PID(&RM_Speed_PID[id]);
   reset_PID(&RM_Position_PID[id]);
-  RM_Speed_PID[id].KP = 1.4;
-  RM_Speed_PID[id].KI = 0.9;
-  RM_Speed_PID[id].KD = 0.6;
-  RM_Speed_PID[id].i_max = 5000;
-  RM_Speed_PID[id].I_TIME = 0.005;
+  RM_Speed_PID[id].Kp = 1.4;
+  RM_Speed_PID[id].Ki = 0.9;
+  RM_Speed_PID[id].Kd = 0.6;
+  RM_Speed_PID[id].int_max = 5000;
+  RM_Speed_PID[id].int_duty = 0.005;
 
-  RM_Position_PID[id].KP = 0.13;
-  RM_Position_PID[id].KI = 0;
-  RM_Position_PID[id].KD = 0.082;
-  RM_Position_PID[id].i_max = 5000;
-  RM_Position_PID[id].I_TIME = 0.005;
+  RM_Position_PID[id].Kp = 0.13;
+  RM_Position_PID[id].Ki = 0;
+  RM_Position_PID[id].Kd = 0.082;
+  RM_Position_PID[id].int_max = 5000;
+  RM_Position_PID[id].int_duty = 0.005;
 }
 
 void M3508_init(int id)
 {
   reset_PID(&RM_Speed_PID[id]);
   reset_PID(&RM_Position_PID[id]);
-  RM_Speed_PID[id].KP = 1.6;
-  RM_Speed_PID[id].KI = 0.52;
-  RM_Speed_PID[id].KD = 0.6;
-  RM_Speed_PID[id].i_max = 5000;
-  RM_Speed_PID[id].I_TIME = 0.005;
+  RM_Speed_PID[id].Kp = 1.6;
+  RM_Speed_PID[id].Ki = 0.52;
+  RM_Speed_PID[id].Kd = 0.6;
+  RM_Speed_PID[id].int_max = 5000;
+  RM_Speed_PID[id].int_duty = 0.005;
 
-  RM_Position_PID[id].KP = 0.1;
-  RM_Position_PID[id].KI = 0;
-  RM_Position_PID[id].KD = 0.8;
-  RM_Position_PID[id].i_max = 5000;
-  RM_Position_PID[id].I_TIME = 0.005;
+  RM_Position_PID[id].Kp = 0.1;
+  RM_Position_PID[id].Ki = 0;
+  RM_Position_PID[id].Kd = 0.8;
+  RM_Position_PID[id].int_max = 5000;
+  RM_Position_PID[id].int_duty = 0.005;
 }

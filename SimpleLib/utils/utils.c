@@ -7,31 +7,32 @@ void PID_init()
 float PID_Release(PID_t *PID, float target, float now)
 {
   float err;
-  float err_dt;
+  float delta_err;
   float result;
 
   err = target - now;
-  err_dt = err - PID->last_err;
+  delta_err = err - PID->last_err;
 
-  err_dt *= 0.384f;
-  err_dt += PID->last_d * 0.615f; //低通滤波
+  delta_err *= 0.384f;
+  delta_err += PID->last_delta_err * 0.615f; //低通滤波
 
   PID->last_err = err;
 
-  PID->i += err * PID->I_TIME; // 积分量
+  PID->int_sum += err * PID->int_duty; // 积分量
 
-  LIMIT(PID->i, PID->i_max); // 限制积分量大小
-  PID->last_d = err_dt;
+  LIMIT(PID->int_sum, PID->int_max); // 限制积分量大小
+  PID->last_delta_err = delta_err;
 
-  result = err * PID->KP + err_dt * PID->KD + PID->i * PID->KI;
+  result = err * PID->Kp + delta_err * PID->Kd + PID->int_sum * PID->Ki;
+  LIMIT(result, PID->ctrl_max);
   return result;
 }
 
 void reset_PID(PID_t *s)
 {
-  s->i = 0;
+  s->int_sum = 0;
   s->last_err = 0;
-  s->last_d = 0;
+  s->last_delta_err = 0;
 }
 
 float AngleLimit180(float angle)

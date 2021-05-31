@@ -56,8 +56,8 @@ extern "C"
   extern PID_t RM_Position_PID[4];
 
   /*Function Declare*/
-  void can_robomaster_rcv_1(can_msg *pRxMsg);
-  void can_robomaster_rcv_2(can_msg *pRxMsg);
+  void can_robomaster_rcv_1(CANMsg *pRxMsg);
+  void can_robomaster_rcv_2(CANMsg *pRxMsg);
   void Robomaster_RPMControl();
   void Robomaster_PositionControl();
   void Robomaster_StopByAngle(int index);

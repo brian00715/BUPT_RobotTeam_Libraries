@@ -3,9 +3,11 @@
  * @author Simon
  * @date 2020/11/
  ******************************************************************/
+#include "steer_wheel.h"
+#include "chassis_common.h"
+#include "rudder_chassis.h"
 #ifdef USE_RUDDER_CHASSIS
-#include "sw_wheel.h"
-extern struct SW_Chassis_t SW_Chassis;
+extern RudderChassis_t RudderChassis;
 
 //======================================private==========================================
 
@@ -26,7 +28,7 @@ void SW_MotorInit(struct SW_DriveMotor_t *driver_motor, struct SW_SteerMotor_t *
     }
     // 注册函数
     steer_motor->setPos = SW_SteerMotors_SetPos;
-    driver_motor->setRPM = SW_DriveMotors_SetRpm;
+    driver_motor->setSpeed = SW_DriveMotors_SetSpeed;
 }
 
 int SW_InitCalibration_BreakFlag = 0;
@@ -100,10 +102,10 @@ void SW_InitCalibration()
         }
     }
     DJI_velCtrAll(stop);
-    SW_Chassis.ctrl_mode = SW_MODE_NONE;
+    RudderChassis.base->ctrl_mode = CTRL_MODE_NONE;
     uprintf("--SW: SteerWheel Calibration Done!\r\n");
-    SW_PostureStatusInit();
-    SW_Handle_Init();
+    Chassis_PostureStatusInit();
+    Handle_Init();
     for (int i = 0; i < 4; i++)
     {
         MotorOn(CAN1, i + 1);                                 // 使驱动板认为的瞬时角度值为0
@@ -123,20 +125,14 @@ void SW_PrintHallSwitchStatus(void)
     }
 }
 
-int SW_SendCanMsg_Driver = 0; // 控制5ms发送一次can消息
-int SW_SendCanMsg_Steer = 0;
 /**
  * @brief 发送CAN报文，同时设置4个舵轮的舵向
- * @param target_pos 目标角度/rad 需要转为degree发给DJI电调
+ * @param target_pos 目标角度/rad 假定已经乘过减速比。需要转为degree发给DJI电调
  */
 void SW_SteerMotors_SetPos(float target_pos[])
 {
-    if (!SW_SendCanMsg_Steer) // 控制发送周期
+    if (!RudderChassis.SteerMotors.can_send_flag) // 控制发送周期
         return;
-    // for (int i = 0; i < 4; i++)
-    // {
-    //     target_pos[i] += SW_ZeroPos[i]; // 补偿零位校正
-    // }
     SW_SteerMotors_LimitPos(target_pos);
     static int16_t target_pos_int[4];
     for (int i = 0; i < 4; i++)
@@ -144,27 +140,27 @@ void SW_SteerMotors_SetPos(float target_pos[])
         target_pos_int[i] = (int16_t)RAD2ANGLE(target_pos[i]);
     }
     DJI_posCtrlAll(target_pos_int);
-    SW_SendCanMsg_Steer = 0;
+    RudderChassis.SteerMotors.can_send_flag = 0;
 }
 
 /**
- * @brief 向驱动轮电调发送速度命令
+ * @brief 向驱动轮电调发送速度命令，将线速度转为电转速
  * 
  * @param vel 单位m/s
  * @note 需要将vel转为电转速 
  */
-void SW_DriveMotors_SetRpm(float vel[4])
+void SW_DriveMotors_SetSpeed(float vel[4])
 {
-    if (!SW_SendCanMsg_Driver) // 控制发送周期
+    if (!RudderChassis.DriveMotors.can_send_flag) // 控制发送周期
         return;
     for (int i = 0; i < 4; i++)
     {
         vel[i] = SW_Speed2eRPM(vel[i]); // >>>请根据不同电机进行换算<<<
-        comm_can_set_rpm(SW_Chassis.DriveMotors->id[i], vel[i]);
-        if (3 == i || 2 == i)
+        comm_can_set_rpm(RudderChassis.DriveMotors.id[i], vel[i]);
+        //if (3 == i || 2 == i)
             HAL_Delay(1); // 发送间隔1ms，否则最后一个发不出去
     }
-    SW_SendCanMsg_Driver = 0;
+    RudderChassis.DriveMotors.can_send_flag = 0;
 }
 
 /**
@@ -199,10 +195,10 @@ void SW_SteerMotors_GetAngle()
 }
 
 extern RM_MotorStatus_t RM_MotorStatus[4];
-int PrintMotorStatus_Flag = 0;
+uint8_t SW_PrintMotorStatus_Flag = 0;
 void SW_PrintMotorStatus()
 {
-    if (!(PrintMotorStatus_Flag && TimeFlag_20ms))
+    if (!(SW_PrintMotorStatus_Flag && TimeFlag_20ms))
         return;
     uprintf("--DJIMotor|");
 

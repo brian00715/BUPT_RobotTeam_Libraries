@@ -19,9 +19,8 @@ extern "C"
 #include <stdlib.h>
 #include "dji_ctr.h"
 #include <string.h>
-#include "sw_chassis.h"
 
-    void cmd_func_init(void);
+void cmd_func_init(void);
 
 
 #ifdef __cplusplus

@@ -19,7 +19,7 @@ void MotorOn(CAN_TypeDef *CANx, uint8_t ElmoNum)
         0x00004F4D,
         0x00000001,
     };
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -31,7 +31,7 @@ void MotorOn(CAN_TypeDef *CANx, uint8_t ElmoNum)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -45,7 +45,7 @@ void MotorOff(CAN_TypeDef *CANx, uint8_t ElmoNum)
     uint32_t data[1][2] = {
         0x00004F4D, 0x00000000, //MO  0
     };
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -57,7 +57,7 @@ void MotorOff(CAN_TypeDef *CANx, uint8_t ElmoNum)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -145,7 +145,7 @@ void CurCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t cur)
     };
     data[0][1] = cur;
 
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -157,7 +157,7 @@ void CurCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t cur)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 /**
 * @brief  配置加速度与减速度
@@ -175,7 +175,7 @@ void SetAccAndDec(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec
         0x00004341, 0x00000000, //AC
         0x00004344, 0x00000000  //DC
     };
-    can_msg msg;
+    CANMsg msg;
 
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
@@ -193,7 +193,7 @@ void SetAccAndDec(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec
         msg.ui8[6] = (*(unsigned long *)&data[i][1] >> 16) & 0xff;
         msg.ui8[7] = (*(unsigned long *)&data[i][1] >> 24) & 0xff;
 
-        can_send_msg(StdId, &msg);
+        CAN_SendMsg(StdId, &msg);
     }
 }
 
@@ -213,7 +213,7 @@ void SetPosLoopVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel)
     };
     data[0][1] = vel;
 
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -226,7 +226,7 @@ void SetPosLoopVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -250,7 +250,7 @@ void SetUnitMode(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t unitMode)
     };
     data[0][1] = unitMode;
 
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -262,7 +262,7 @@ void SetUnitMode(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t unitMode)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -281,7 +281,7 @@ void SetJoggingVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel)
     };
     data[0][1] = vel;
 
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -293,7 +293,7 @@ void SetJoggingVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -318,7 +318,7 @@ void SendPosCmd(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos
     }
     data[0][1] = pos;
 
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -330,7 +330,7 @@ void SendPosCmd(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**********************************特殊控制指令*******************************************/
@@ -342,14 +342,14 @@ void SendPosCmd(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos
  */
 void DJI_velCtrAll(int16_t vel[4])
 {
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID - 1;
     for (int i = 0; i < 4; i++)
     {
         msg.ui8[i * 2] = vel[i] & 0xff;
         msg.ui8[i * 2 + 1] = (vel[i] >> 8) & 0xff;
     }
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -360,14 +360,14 @@ void DJI_velCtrAll(int16_t vel[4])
  */
 void DJI_posCtrlAll(int16_t pos[4])
 {
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID - 2;
     for (int i = 0; i < 4; i++)
     {
         msg.ui8[i * 2] = pos[i] & 0xff;
         msg.ui8[i * 2 + 1] = (pos[i] >> 8) & 0xff;
     }
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 /**********************************读取驱动器数据命令*************************************/
 
@@ -383,7 +383,7 @@ void DJI_ReadActualPos(CAN_TypeDef *CANx, uint8_t ElmoNum)
     uint32_t data[1][2] = {
         0x40005850, 0x00000000, //PX
     };
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -395,7 +395,7 @@ void DJI_ReadActualPos(CAN_TypeDef *CANx, uint8_t ElmoNum)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 
 /**
@@ -410,7 +410,7 @@ void ReadActualVel(CAN_TypeDef *CANx, uint8_t ElmoNum)
     uint32_t data[1][2] = {
         0x40005856, 0x00000000, //VX
     };
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -422,7 +422,7 @@ void ReadActualVel(CAN_TypeDef *CANx, uint8_t ElmoNum)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }
 /** 
 * @brief  读取电机电流
@@ -436,7 +436,7 @@ void ReadActualCur(CAN_TypeDef *CANx, uint8_t ElmoNum)
     uint32_t data[1][2] = {
         0x40005149, 0x00000000, //VX
     };
-    can_msg msg;
+    CANMsg msg;
     uint32_t StdId = ELMO_DEVICE_BASEID + ElmoNum;
 
     msg.ui8[0] = *(unsigned long *)&data[0][0] & 0xff;
@@ -448,5 +448,5 @@ void ReadActualCur(CAN_TypeDef *CANx, uint8_t ElmoNum)
     msg.ui8[6] = (*(unsigned long *)&data[0][1] >> 16) & 0xff;
     msg.ui8[7] = (*(unsigned long *)&data[0][1] >> 24) & 0xff;
 
-    can_send_msg(StdId, &msg);
+    CAN_SendMsg(StdId, &msg);
 }

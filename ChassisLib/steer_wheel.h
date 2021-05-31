@@ -1,6 +1,8 @@
-#ifndef __STEER_WHEEL_H_
-#define __STEER_WHEEL_H_
+#ifndef STEER_WHEEL_H_
+#define STEER_WHEEL_H_
 
+#include "chassis_common.h"
+#include "common_config.h"
 #ifdef USE_RUDDER_CHASSIS
 
 #ifdef __cplusplus
@@ -14,7 +16,7 @@ extern "C"
 #include "dji_ctr.h"
 #include "motor_driver.h"
 #include "chassis_utils.h"
-#include "sw_config.h"
+#include "common_config.h"
     //=================================宏和枚举类=================================
 
     typedef enum
@@ -27,33 +29,33 @@ extern "C"
 
     //=================================结构体=================================
 
-    struct SW_SteerMotor_t // 舵向电机m2006
+    typedef struct SW_SteerMotor_t // 舵向电机m2006
     {
         int16_t now_pos[4];
         void (*setPos)(float pos[4]); // 舵轮角度环控制的函数指针
-    };
+        uint8_t can_send_flag ;
+    }SW_SteerMotor_t;
 
-    struct SW_DriveMotor_t // 主驱动电机（本杰明控制）
+    typedef struct SW_DriveMotor_t // 主驱动电机（本杰明控制）
     {
         uint8_t id[4];    // 本杰明电调的can消息id
         float duty[4];    // 占空比
         float current[4]; // 电流
         float rpm[4];     // 转速
         uint16_t pos[4];  // 位置
-        void (*setRPM)(float speed[4]);
-    };
+        void (*setSpeed)(float speed[4]);
+        uint8_t can_send_flag ;
+    }SW_DriveMotor_t;
 
     //=================================全局变量=================================
 
-    extern int SW_SendCanMsg_Driver;
-    extern int SW_SendCanMsg_Steer;
     extern int SW_InitCalibration_BreakFlag;
-    extern float SW_ZeroPos[4];
+    extern uint8_t SW_PrintMotorStatus_Flag;
 
     //=================================函数声明=================================
 
     void SW_MotorInit(struct SW_DriveMotor_t *driver_motor, struct SW_SteerMotor_t *steer_motor);
-    void SW_DriveMotors_SetRpm(float vel[4]);
+    void SW_DriveMotors_SetSpeed(float vel[4]);
     void SW_DriveMotors_LimitSpeed(float rpm[4]);
     void SW_SteerMotors_SetPos(float target_pos[]);
     void SW_SteerMotors_LimitPos(float pos[4]);

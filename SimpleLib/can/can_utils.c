@@ -27,30 +27,30 @@ CAN_TxHeaderTypeDef TxHeader;
 CAN_TxHeaderTypeDef ExtTxHeader;
 CAN_RxHeaderTypeDef RxHeader;
 uint32_t TxMailbox;
-can_msg can_rx_data;
-can_msg can_tx_data;
+CANMsg can_rx_data;
+CANMsg can_tx_data;
 uint32_t std_id[] = {230, 324, 325, 0x201, 89, 1, 0x281, 0x282};
 // 0x281返回elmo为1的大疆电机的信息，0x282返回四个电机的位置信息
 // uint32_t ext_id[] = {0x963};  // 0x963是本杰明电调的状态包ID，第四位是转速
 
-static can_msg rx_buffer = {0};
+static CANMsg rx_buffer = {0};
 static uint32_t rx_id = 0;
 
-static void CAN_config(CAN_HandleTypeDef *hcan);
+static void CAN_Config(CAN_HandleTypeDef *hcan);
 static HashTable can_callback_table = NULL;
 
 static unsigned int hash_id(const void *id);
 static int id_cmp(const void *, const void *);
 
-void can_init(CAN_HandleTypeDef *hcan)
+void CAN_Init(CAN_HandleTypeDef *hcan)
 {
     HCAN = *hcan;
-    CAN_config(&HCAN);
+    CAN_Config(&HCAN);
     if (can_callback_table == NULL)
     {
         can_callback_table = HashTable_create(id_cmp, hash_id, NULL);
     }
-    can_func_init();
+    CAN_FuncInit();
 }
 
 /**
@@ -59,7 +59,7 @@ void can_init(CAN_HandleTypeDef *hcan)
  * @param   callback    回调函数指针 data: can接收到数据联合体
  * @return	None
  */
-void can_callback_add(const uint32_t id, void (*callback)(can_msg *data))
+void CAN_CallbackAdd(const uint32_t id, void (*callback)(CANMsg *data))
 {
     uint32_t *can_id = (uint32_t *)malloc(sizeof(uint32_t));
     *can_id = id;
@@ -69,9 +69,9 @@ void can_callback_add(const uint32_t id, void (*callback)(can_msg *data))
 /**
  * @brief 所有can消息解析函数的执行体
  */
-void can_exe_callback(void)
+void CAN_CallbackExe(void)
 {
-    void (*callback_func)(can_msg *) = (void (*)(can_msg *))HashTable_get(can_callback_table, &rx_id);
+    void (*callback_func)(CANMsg *) = (void (*)(CANMsg *))HashTable_get(can_callback_table, &rx_id);
     if (callback_func)
     {
         callback_func(&rx_buffer); // 执行CAN消息解析函数
@@ -84,7 +84,7 @@ void can_exe_callback(void)
             _can_rx_nrf_callback(&rx_id, &rx_buffer);
         }
 #endif // SL_NRF_COMM
-        can_rx_callback(&rx_buffer);
+        CAN_RxCallback(&rx_buffer);
     }
 }
 
@@ -120,13 +120,13 @@ void can_send_test(void)
  * @return	0 正常发送
  *          1: 发送失败
  **/
-int can_send_msg(uint16_t std_id, can_msg *msg)
+int CAN_SendMsg(uint16_t std_id, CANMsg *msg)
 {
     TxHeader.StdId = std_id;
     TxHeader.IDE = CAN_ID_STD;
 #ifdef DEBUG
     uprintf("%d %d %d\r\n", std_id, msg->in[0], msg->in[1]);
-#endif //DEBUG
+#endif                                                            //DEBUG
     HAL_CAN_AddTxMessage(&HCAN, &TxHeader, msg->ui8, &TxMailbox); // 发送常规的uint8类型数据
     //   if (HAL_CAN_AddTxMessage(&HCAN, &TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
     //   {
@@ -159,7 +159,7 @@ int can_send_msg(uint16_t std_id, can_msg *msg)
  * @brief	can ext id send
  * @return	0: send ok; 1: send error;
  */
-int can_ext_send_msg(uint32_t id, can_msg *msg)
+int CAN_SendExtMsg(uint32_t id, CANMsg *msg)
 {
     TxHeader.ExtId = id;
     TxHeader.IDE = CAN_ID_EXT;
@@ -175,9 +175,9 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     return;
 }
 
-__weak void can_rx_callback(can_msg *data) {}
+__weak void CAN_RxCallback(CANMsg *data) {}
 
-void CAN_config(CAN_HandleTypeDef *hcan)
+void CAN_Config(CAN_HandleTypeDef *hcan)
 {
 
     // FIXME: ZeroVoid	2019/11/13	 len 无法为零, 从而不过滤CAN

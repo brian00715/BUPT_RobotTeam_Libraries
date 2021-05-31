@@ -76,10 +76,10 @@ void vesc_set_handbrake_rel(uint8_t controller_id, float current_rel);
 #ifdef EN_MOTOR_DRIVER
 /**
  * @brief	给HX 驱动卡&DriverPro 代码的CAN发送通信协议封装
- * @note	can_msg.in[0] 取值含义.
+ * @note	CANMsg.in[0] 取值含义.
  */
 typedef enum normal_driver {
-    MD_DUTY = 0,    // can_msg.in[1] 取值范围-100~100
+    MD_DUTY = 0,    // CANMsg.in[1] 取值范围-100~100
     MD_SPEED = 1,
     MD_POSITION = 2
 } MD_DRIVER_ENUM;

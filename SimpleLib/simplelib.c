@@ -36,8 +36,8 @@ void simplelib_init(UART_HandleTypeDef *cmd_usart, CAN_HandleTypeDef *hcan)
 #ifdef SL_CAN
     if (hcan != NULL)
     {
-        can_init(hcan);
-        can_func_init();
+        CAN_Init(hcan);
+        CAN_FuncInit();
     }
 #endif // SL_CAN
 }
@@ -54,7 +54,7 @@ void simplelib_run(void)
 #ifdef SL_CAN
     if (can_exc_callback_flag)
     {
-        can_exe_callback();
+        CAN_CallbackExe();
         can_exc_callback_flag = 0;
     }
 #endif // SL_CAN

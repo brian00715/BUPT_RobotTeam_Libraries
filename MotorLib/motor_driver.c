@@ -13,20 +13,38 @@
 #include <math.h>
 #include "cmd.h"
 
-#define VESC_BASE_ID 88
-VESCMotor_t vesc = {0};
+VESCDriver_t vesc = {0};
 CANSendFlag_t CANSendFlag = {0};
+
+/**
+ * @brief 电机驱动器基类初始化
+ * 
+ */
+void MotorDriver_Init(MotorDriver_t *motor_driver, uint8_t can_id, DriverMode mode)
+{
+  motor_driver->can_id = can_id;
+  motor_driver->mode = mode;
+  motor_driver->target_current = 0;
+  motor_driver->target_duty = 0;
+  motor_driver->target_rpm = 0;
+  motor_driver->target_position = 0;
+  motor_driver->now_current = 0;
+  motor_driver->now_duty = 0;
+  motor_driver->now_rpm = 0;
+  motor_driver->now_position = 0;
+}
 
 /**
  * @brief 初始化本杰明电调
  **/
-void VESC_Init(VESCMotor_t *vesc, uint8_t id, char mode)
+void VESC_Init(VESCDriver_t *vesc, uint8_t id, VESCMode mode)
 {
   vesc->id = id;
   vesc->mode = mode;
   vesc->target_current = 0;
   vesc->target_duty = 0;
   vesc->target_rpm = 0;
+  vesc->target_position = 0;
 }
 
 /**
@@ -77,14 +95,14 @@ int VESC_SwitchPrintInfo_Flag = 0;
 /**
  * @brief 本杰明电调反馈状态包解析函数
  **/
-void VESC_RxHandler(can_msg *data)
+void VESC_RxHandler(CANMsg *data)
 {
   int32_t index = 0;
   vesc.now_position = buffer_get_int16(data->ui8, &index) / 50;
   vesc.now_rpm = buffer_get_int32(data->ui8, &index);
 }
 
-void VESC_PrintInfo(VESCMotor_t *vesc)
+void VESC_PrintInfo(VESCDriver_t *vesc)
 {
   if (VESC_SwitchPrintInfo_Flag)
   {
@@ -110,4 +128,3 @@ void VESC_PrintInfo(VESCMotor_t *vesc)
     }
   }
 }
-

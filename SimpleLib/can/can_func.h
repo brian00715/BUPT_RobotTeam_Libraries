@@ -11,15 +11,15 @@ extern "C"
 
     extern int can_data_show_flag;
 
-    void can_func_init();
-    void can_show_button(can_msg *data);
-    void can_show_rocker(can_msg *data);
-    void can_rx_callback(can_msg *data);
-    void CAN_Callback_DJI_ReadInfo(can_msg *data);
-    void CAN_Callback_DJI_ReadAllPosInfo(can_msg *data);
-    void CAN_Callback_VEGA_ReadPos_X(can_msg *data);
-    void CAN_Callback_VEGA_ReadPos_Y(can_msg *data);
-    void CAN_Callback_VEGA_ReadPos_Yaw(can_msg *data);
+    void CAN_FuncInit();
+    void can_show_button(CANMsg *data);
+    void can_show_rocker(CANMsg *data);
+    void CAN_RxCallback(CANMsg *data);
+    void CAN_Callback_DJI_ReadInfo(CANMsg *data);
+    void CAN_Callback_DJI_ReadAllPosInfo(CANMsg *data);
+    void CAN_Callback_VEGA_ReadPos_X(CANMsg *data);
+    void CAN_Callback_VEGA_ReadPos_Y(CANMsg *data);
+    void CAN_Callback_VEGA_ReadPos_Yaw(CANMsg *data);
 
 #endif // SL_CAN
 #ifdef __cplusplus

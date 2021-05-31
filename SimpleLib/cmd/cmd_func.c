@@ -282,37 +282,55 @@ void CMD_Chassis_Move(int argc, char *argv[])
             Chassis_MoterDuty[1], Chassis_MoterDuty[2]);
 }
 
-extern float CMD_ChassisSpeed;
-extern float CMD_ChassisDir;
-extern float CMD_ChassisOmega;
-void CMD_Chassis_Teleop_GoAhead(int argc, char **argv)
+extern float CMD_TargetSpeed;
+extern float CMD_TargetDir;
+extern float CMD_TargetOmega;
+void CMD_Chassis_Teleop_Acc(int argc, char **argv)
 {
-    CMD_ChassisSpeed += 0.1;
-    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_ChassisSpeed, CMD_ChassisDir, CMD_ChassisOmega);
+    CMD_TargetSpeed += 0.1;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
-void CMD_Chassis_Teleop_GoBack(int argc, char **argv)
+void CMD_Chassis_Teleop_Dec(int argc, char **argv)
 {
-    CMD_ChassisSpeed -= 0.1;
-    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_ChassisSpeed, CMD_ChassisDir, CMD_ChassisOmega);
+    CMD_TargetSpeed -= 0.1;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
+}
+
+void CMD_Chassis_Teleop_GoAhead(int argc, char **argv)
+{
+    CMD_TargetOmega = 0;
+    CMD_TargetSpeed = 0.3;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_TurnLeft(int argc, char **argv)
 {
-    CMD_ChassisDir += 5;
-    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_ChassisSpeed, CMD_ChassisDir, CMD_ChassisOmega);
+    CMD_TargetOmega += 5;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_TurnRight(int argc, char **argv)
 {
-    CMD_ChassisDir -= 5;
-    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_ChassisSpeed, CMD_ChassisDir, CMD_ChassisOmega);
+    CMD_TargetOmega -= 5;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_Stop(int argc, char **argv)
 {
-    CMD_ChassisSpeed = 0;
-    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_ChassisSpeed, CMD_ChassisDir, CMD_ChassisOmega);
+    CMD_TargetSpeed = 0;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
+}
+
+void CMD_Chassis_Teleop_ShiftRight(int argc, char **argv)
+{
+    CMD_TargetDir = 0;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
+}
+void CMD_Chassis_Teleop_ShiftLeft(int argc, char **argv)
+{
+    CMD_TargetDir = 180;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 /**
@@ -348,8 +366,7 @@ void CMD_SwitchPrintTargetStatus(int argc, char **argv)
     }
 }
 
-
-void CMD_SW_ChangePosMode(int argc, char **argv)
+void CMD_ChangePosMode(int argc, char **argv)
 {
     BaseChassis.pos_mode = (BaseChassis.pos_mode + 1) % 2;
     if (BaseChassis.pos_mode == POS_MODE_ABSOLUTE)
@@ -362,8 +379,14 @@ void CMD_SW_ChangePosMode(int argc, char **argv)
     }
 }
 
-float CMD_TargetYaw = 0;
-extern int YawTuning_Start;
+void CMD_ChangeCtrlMode(int argc, char **argv)
+{
+    BaseChassis.ctrl_mode = (BaseChassis.ctrl_mode + 1) % 4;
+    uprintf("--CMD|Ctrl mode change to %d\r\n", BaseChassis.ctrl_mode);
+}
+
+extern float CMD_TargetYaw;
+extern char YawTuning_Start;
 void CMD_YawTuning(int argc, char **argv)
 {
     BaseChassis.ctrl_mode = CTRL_MODE_TUNING;
@@ -374,10 +397,10 @@ void CMD_YawTuning(int argc, char **argv)
     float ki = atof(argv[4]);
     float int_duty = atof(argv[5]);
     YawTuning_Start = atoi(argv[6]);
-    YawPID.KP = kp;
-    YawPID.KD = kd;
-    YawPID.KI = ki;
-    YawPID.I_TIME = int_duty;
+    YawPID.Kp = kp;
+    YawPID.Kd = kd;
+    YawPID.Ki = ki;
+    YawPID.int_duty = int_duty;
     uprintf("--CMD|TargetYaw:%.2f kp:%.2f kd:%.2f ki:%.2f int_duty:%.2f start_flag:%d \r\n", CMD_TargetYaw, kp, kd, ki, int_duty, YawTuning_Start);
 }
 
@@ -391,10 +414,10 @@ void CMD_SetYawPID(int argc, char **argv)
     float kd = atof(argv[2]);
     float ki = atof(argv[3]);
     float int_duty = atof(argv[4]);
-    YawPID.KP = kp;
-    YawPID.KD = kd;
-    YawPID.KI = ki;
-    YawPID.I_TIME = int_duty;
+    YawPID.Kp = kp;
+    YawPID.Kd = kd;
+    YawPID.Ki = ki;
+    YawPID.int_duty = int_duty;
     uprintf("--CMD|YawPID - kp:%.2f kd:%.2f ki:%.2f int_duty:%.2f \r\n",
             kp, kd, ki, int_duty);
 }
@@ -404,17 +427,35 @@ void CMD_SetYawPID(int argc, char **argv)
  */
 void CMD_SetNormalCorrPID(int argc, char **argv)
 {
-    extern PID_t NormalCorrPID;
+    extern PID_t NormalCorrPID_x, NormalCorrPID_y;
     float kp = atof(argv[1]);
     float kd = atof(argv[2]);
     float ki = atof(argv[3]);
     float int_duty = atof(argv[4]);
-    NormalCorrPID.KP = kp;
-    NormalCorrPID.KD = kd;
-    NormalCorrPID.KI = ki;
-    NormalCorrPID.I_TIME = int_duty;
+    NormalCorrPID_x.Kp = kp;
+    NormalCorrPID_x.Kd = kd;
+    NormalCorrPID_x.Ki = ki;
+    NormalCorrPID_x.int_duty = int_duty;
+    NormalCorrPID_y.Kp = kp;
+    NormalCorrPID_y.Kd = kd;
+    NormalCorrPID_y.Ki = ki;
+    NormalCorrPID_y.int_duty = int_duty;
     uprintf("--CMD|NormalCorrPID - kp:%.2f kd:%.2f ki:%.2f int_duty:%.2f \r\n",
             kp, kd, ki, int_duty);
+}
+
+void CMD_SwitchPrintMotorStatus(int argc, char **argv)
+{
+    extern uint8_t SW_PrintMotorStatus_Flag;
+    SW_PrintMotorStatus_Flag = (SW_PrintMotorStatus_Flag + 1) % 2;
+    if (SW_PrintMotorStatus_Flag == 1)
+    {
+        uprintf("--Start print motor status!\r\n");
+    }
+    else
+    {
+        uprintf("--Stop print motor status!\r\n");
+    }
 }
 
 /********************************END***********************************/
@@ -429,9 +470,11 @@ void cmd_func_init(void)
     cmd_add("vesc", "<mode(0,1,2)> <value>", CMD_VESC_SetParam);
     cmd_add("vesc_switch_print_info", "0 to close;1 to open", CMD_VESC_SwitchPrintInfo);
     cmd_add("rm", "", cmd_robomaster_control);
+    cmd_add("SwitchPrintMotorStatus", "press to change ", CMD_SwitchPrintMotorStatus);
 
     //chassis
-    cmd_add("SW_ChangePosMode", "", CMD_SW_ChangePosMode);
+    cmd_add("ChangePosMode", "", CMD_ChangePosMode);
+    cmd_add("ChangeCtrlMode", "", CMD_ChangeCtrlMode);
     cmd_add("SwitchPrintTargetStatus", "press to change ", CMD_SwitchPrintTargetStatus);
     cmd_add("SwitchPrintChassisStatus", "", CMD_SwitchPrintChassisStatus);
     cmd_add("YawTuning", "<TargetYaw><kp><kd><ki><intTime><StartFlag>", CMD_YawTuning);
@@ -439,11 +482,13 @@ void cmd_func_init(void)
     cmd_add("SetNormalCorrPID", "<kp><kd><ki><intTime>", CMD_SetNormalCorrPID);
 
     // teleop
-    cmd_add("SW_Teleop_GoAhead", "", CMD_Chassis_Teleop_GoAhead);
-    cmd_add("SW_Teleop_GoBack", "", CMD_Chassis_Teleop_GoBack);
-    cmd_add("SW_Teleop_TurnLeft", "", CMD_Chassis_Teleop_TurnLeft);
-    cmd_add("SW_Teleop_TurnRight", "", CMD_Chassis_Teleop_TurnRight);
-    cmd_add("SW_Teleop_Stop", "", CMD_Chassis_Teleop_Stop);
+    cmd_add("Teleop_Acc", "", CMD_Chassis_Teleop_Acc);
+    cmd_add("Teleop_Dec", "", CMD_Chassis_Teleop_Dec);
+    cmd_add("Teleop_TurnLeft", "", CMD_Chassis_Teleop_TurnLeft);
+    cmd_add("Teleop_TurnRight", "", CMD_Chassis_Teleop_TurnRight);
+    cmd_add("Teleop_ShiftLeft", "", CMD_Chassis_Teleop_TurnLeft);
+    cmd_add("Teleop_ShiftRight", "", CMD_Chassis_Teleop_TurnRight);
+    cmd_add("Teleop_Stop", "", CMD_Chassis_Teleop_Stop);
 
     //laser
     cmd_add("laser_print_diatance", "", cmd_laser_print_diatance);

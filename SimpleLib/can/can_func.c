@@ -8,28 +8,28 @@
 
 #ifdef SL_CAN
 
-void can_get_mag_mtr(can_msg *data);
+void can_get_mag_mtr(CANMsg *data);
 
-void can_func_init()
+void CAN_FuncInit()
 {
-    can_callback_add(324, Handle_Rocker);
-    can_callback_add(325, Handle_Button);
-    can_callback_add(0x281, CAN_Callback_DJI_ReadInfo);
-    can_callback_add(0x282, CAN_Callback_DJI_ReadAllPosInfo);
-    can_callback_add(204, CAN_Callback_VEGA_ReadPos_X);
-    can_callback_add(205, CAN_Callback_VEGA_ReadPos_Y);
-    can_callback_add(206, CAN_Callback_VEGA_ReadPos_Yaw);
+    CAN_CallbackAdd(324, Handle_Rocker);
+    CAN_CallbackAdd(325, Handle_Button);
+    CAN_CallbackAdd(0x281, CAN_Callback_DJI_ReadInfo);
+    CAN_CallbackAdd(0x282, CAN_Callback_DJI_ReadAllPosInfo);
+    CAN_CallbackAdd(204, CAN_Callback_VEGA_ReadPos_X);
+    CAN_CallbackAdd(205, CAN_Callback_VEGA_ReadPos_Y);
+    CAN_CallbackAdd(206, CAN_Callback_VEGA_ReadPos_Yaw);
 }
 
 #ifdef SL_DEBU
-can_callback_add(1, can_suc_rx);
-can_callback_add(325, can_show_button);
-can_callback_add(324, can_show_rocker);
+CAN_CallbackAdd(1, can_suc_rx);
+CAN_CallbackAdd(325, can_show_button);
+CAN_CallbackAdd(324, can_show_rocker);
 #endif
 
-__weak void can_rx_callback(can_msg *data) {}
+__weak void CAN_RxCallback(CANMsg *data) {}
 
-void CAN_Callback_DJI_ReadInfo(can_msg *data)
+void CAN_Callback_DJI_ReadInfo(CANMsg *data)
 {
     int id = (data->in[0]) >> 16;
     int index = ((data->in[0]) << 16) >> 16;
@@ -57,7 +57,7 @@ void CAN_Callback_DJI_ReadInfo(can_msg *data)
     }
 }
 
-void CAN_Callback_DJI_ReadAllPosInfo(can_msg *data)
+void CAN_Callback_DJI_ReadAllPosInfo(CANMsg *data)
 {
     // uprintf("--Received DJI CAN Msg\r\n");
     // 直接得到的是电机输出轴的位置（已经除过819.2了）
@@ -69,21 +69,21 @@ void CAN_Callback_DJI_ReadAllPosInfo(can_msg *data)
 
 PostureStatus_t BUPT_Location1;
 PostureStatus_t BUPT_Location2;
-void CAN_Callback_VEGA_ReadPos_X(can_msg *data)
+void CAN_Callback_VEGA_ReadPos_X(CANMsg *data)
 {
     // SW_Chassis.PostureStatus->x = data->fl[0];
     BUPT_Location1.x = data->fl[0];
     BUPT_Location2.x = data->fl[1];
 }
 
-void CAN_Callback_VEGA_ReadPos_Y(can_msg *data)
+void CAN_Callback_VEGA_ReadPos_Y(CANMsg *data)
 {
     // SW_Chassis.PostureStatus->y = data->fl[0];
     BUPT_Location1.y = data->fl[0];
     BUPT_Location2.y = data->fl[1];
 }
 
-void CAN_Callback_VEGA_ReadPos_Yaw(can_msg *data)
+void CAN_Callback_VEGA_ReadPos_Yaw(CANMsg *data)
 {
     // SW_Chassis.PostureStatus->yaw = data->fl[0];
     BUPT_Location1.yaw = data->fl[0];

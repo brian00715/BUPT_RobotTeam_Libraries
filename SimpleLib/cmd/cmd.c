@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include "cmd.h"
 #include "hash.h"
-#include "sw_chassis.h"
 #include "chassis_common.h"
 
 /* 变量定义 -----------------------------------------------------*/
@@ -21,7 +20,7 @@ static const char *delim = ", \r\n\0";
 static HashTable cmd_table;
 
 UART_HandleTypeDef CMD_UART;
-#define  Location_UART (huart5) // action全场定位接口
+#define Location_UART (huart5) // action全场定位接口
 char *cmd_argv[MAX_ARGC];
 uint8_t DMAaRxBuffer[DMA_BUFFER_SIZE];
 char DMAUSART_RX_BUF[DMA_BUFFER_SIZE];
@@ -119,8 +118,8 @@ void HAL_UART_IDLECallback(UART_HandleTypeDef *huart)
         if (DMAUSART_RX_BUF_vega[0] != '\0')
             DMA_RxOK_Flag_vega = 1;
 
-        usart_exc_DMA_vega();                                                 // 将全场定位通过串口发送的消息存入
-        memset(DMAaRxBuffer_vega, 0, 98);                                     // 缓存数组清零
+        usart_exc_DMA_vega();                                                    // 将全场定位通过串口发送的消息存入
+        memset(DMAaRxBuffer_vega, 0, 98);                                        // 缓存数组清零
         HAL_UART_Receive_DMA(&Location_UART, (uint8_t *)&DMAaRxBuffer_vega, 99); //开启DMA串口中断
     }
 }
@@ -299,7 +298,7 @@ void usart_exc_DMA_vega()
                     chassis.vega_pos_x = VegaData_t.ActVal[3] / 1000;
                     chassis.vega_pos_y = VegaData_t.ActVal[4] / 1000;
 #endif
-#ifdef USE_RUDDER_CHASSIS
+
                     float x = VegaData_t.ActVal[3] / 1000;
                     float y = VegaData_t.ActVal[4] / 1000;
                     float yaw = VegaData_t.ActVal[0];
@@ -308,11 +307,11 @@ void usart_exc_DMA_vega()
                     {
                         temp_yaw += 2 * PI;
                     }
-                    SW_Chassis.PostureStatus->yaw = temp_yaw;
-                    SW_Chassis.PostureStatus->x = -x;
-                    SW_Chassis.PostureStatus->y = -y;
-                    SW_UpdatePostureStatus();
-#endif
+                    BaseChassis.PostureStatus.yaw = temp_yaw;
+                    BaseChassis.PostureStatus.x = -x;
+                    BaseChassis.PostureStatus.y = -y;
+                    Chassis_UpdatePostureStatus();
+                    
                     DMA_RxOK_Flag_vega = 0;
                     memset(DMAUSART_RX_BUF_vega, 0, 98);
                     return;

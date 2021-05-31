@@ -46,13 +46,13 @@ extern "C"
  * @brief 计算数组平均数，无需指定数组类型
  * @param result 需要填入double类型
  */
-#define AVE_OF_AR(AR, N, RESULT)      \
-	{                                 \
-		int MACRO_SUM_TEMP = 0;       \
-		for (int i = 0; i < N; i++)   \
-		{                             \
-			MACRO_SUM_TEMP += AR[i];  \
-		}                             \
+#define AVE_OF_AR(AR, N, RESULT)     \
+	{                                \
+		int MACRO_SUM_TEMP = 0;      \
+		for (int i = 0; i < N; i++)  \
+		{                            \
+			MACRO_SUM_TEMP += AR[i]; \
+		}                            \
 		RESULT = MACRO_SUM_TEMP / N; \
 	}
 
@@ -97,14 +97,15 @@ extern "C"
 	// PID结构体，成员分别为Kp Kd Ki i last_err i_max last_d I_TIME
 	typedef struct PID_t
 	{
-		float KP;
-		float KD;
-		float KI;
-		float i;
+		float Kp;
+		float Kd;
+		float Ki;
+		float int_sum;
 		float last_err;
-		float i_max;
-		float last_d;
-		float I_TIME; // PID周期（实际上决定积分时间，即积分的快慢）
+		float int_max;
+		float last_delta_err;
+		float int_duty; // 积分周期（实际上决定积分时间，即积分的快慢）
+		float ctrl_max; // 控制量限幅
 	} PID_t;
 
 	typedef struct Point2D

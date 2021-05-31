@@ -24,13 +24,13 @@ void LedBoard_send_message(int16_t cmd1, int16_t cmd2, int16_t cmd3, int16_t cmd
     Data[5] = cmd6;
     Data[6] = cmd7;
     Data[7] = cmd8;
-    can_msg led_data;
+    CANMsg led_data;
     for (int i = 0; i <= 7; i++)
     {
         led_data.ui8[i] = Data[i];
     }
 
-    can_send_msg(10, &led_data);
+    CAN_SendMsg(10, &led_data);
 }
 
 static uint8_t cmd[8] = {0};

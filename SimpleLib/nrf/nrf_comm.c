@@ -122,7 +122,7 @@ __weak void nrf_max_rt_callback(uint8_t *data, int len) {}
 
 #ifdef SL_NRF_HW_CAN
 
-void _can_rx_nrf_callback(uint32_t *id, can_msg *data) {
+void _can_rx_nrf_callback(uint32_t *id, CANMsg *data) {
     nrf_handle.nrf_data_from = NRF_CAN;
     nrf_handle.nrf_data_to = NRF_UART | NRF_SPI;
     nrf_handle.tx_len = 9 + NRF_PCK_HEADER_SIZE;

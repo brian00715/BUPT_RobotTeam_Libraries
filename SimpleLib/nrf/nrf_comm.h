@@ -53,7 +53,7 @@ typedef enum nrf_comm_way {
 
 void nrf_main(void);
 void nrf_comm_send(uint8_t *data, int len, uint8_t data_deal);
-void _can_rx_nrf_callback(uint32_t *id, can_msg *data);
+void _can_rx_nrf_callback(uint32_t *id, CANMsg *data);
 void _nrf_comm_send(uint8_t *data, int len);
 
 /* Weak Functions -----------------------------------------------------*/
