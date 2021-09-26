@@ -2,7 +2,7 @@
 #define OMNI_CHASSIS_H_
 
 #include "motor_driver.h"
-#include "chassis_common.h"
+#include "base_chassis.h"
 
 #define OMNI_DRIVE_MOTOR_BASE_CANID 50 // 驱动轮CAN ID基址
 

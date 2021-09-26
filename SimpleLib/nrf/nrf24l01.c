@@ -68,7 +68,7 @@ uint8_t nrf_rx_addr[6][5];
 NRF_FLOW_STATE nrf_flow_state = NRF_IDLE;
 bool nrf_rx_addr_set[6] = {0};
 #ifdef SL_DEBUG
-CANMsg msg;
+CAN_Message_u msg;
 #endif // SL_DEBUG
 
 /*******************************************************************************

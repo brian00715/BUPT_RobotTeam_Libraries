@@ -1,6 +1,6 @@
 #ifndef __LASER_H
 #define __LASER_H
-
+#ifdef USE_LASER
 #ifdef __cplusplus
 extern "C"
 {
@@ -72,4 +72,5 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+#endif // USE_LASER
 #endif /*__LASER_H */

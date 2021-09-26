@@ -28,7 +28,7 @@ static void freeKeyAtom(const void *key)
 {
 }
 
-unsigned int hashStr(const void *key)
+unsigned int HashStr(const void *key)
 {
     unsigned int hash = 5381;
     char *ch = (char *)key;
@@ -39,7 +39,7 @@ unsigned int hashStr(const void *key)
     return (hash & 0x7FFFFFFF);
 }
 
-HashTable HashTable_create(int (*cmp)(const void *, const void *),
+HashTable HashTable_Create(int (*cmp)(const void *, const void *),
                            unsigned int (*hash)(const void *),
                            void (*freeKey)(const void *key))
 {
@@ -61,7 +61,7 @@ HashTable HashTable_create(int (*cmp)(const void *, const void *),
     return hashTable;
 }
 
-void HashTable_destory(HashTable *hashTable)
+void HashTable_Destory(HashTable *hashTable)
 {
     assert(hashTable && *hashTable);
 
@@ -81,7 +81,7 @@ void HashTable_destory(HashTable *hashTable)
     free(hashTable);
 }
 
-int HashTable_length(HashTable hashTable)
+int HashTable_GetLength(HashTable hashTable)
 {
     return hashTable->length;
 }
@@ -92,7 +92,7 @@ int HashTable_length(HashTable hashTable)
  * @param key 键
  * @param value key所对应的值
  **/
-void *HashTable_insert(HashTable hashTable, const void *key, void *value)
+void *HashTable_Insert(HashTable hashTable, const void *key, void *value)
 {
     void *prev = NULL; //之前的值
     HashNode *p;
@@ -135,7 +135,7 @@ void *HashTable_insert(HashTable hashTable, const void *key, void *value)
     return prev;
 }
 
-void *HashTable_get(HashTable hashTable, const void *key)
+void *HashTable_GetValue(HashTable hashTable, const void *key)
 {
     unsigned int index;
     HashNode *p;
@@ -156,7 +156,7 @@ void *HashTable_get(HashTable hashTable, const void *key)
     return p ? p->value : NULL;
 }
 
-void *HashTable_remove(HashTable hashTable, const void *key)
+void *HashTable_Remove(HashTable hashTable, const void *key)
 {
     HashNode **pp;
     unsigned int index;
@@ -191,7 +191,7 @@ void *HashTable_remove(HashTable hashTable, const void *key)
  * @param hashTable 哈希表
  * @param apply 函数指针
  **/
-void HashTable_map(HashTable hashTable, void (*apply)(const void *key, void **value, void *c1), void *c1)
+void HashTable_Map(HashTable hashTable, void (*apply)(const void *key, void **value, void *c1), void *c1)
 {
     HashNode *p;
     unsigned int stamp;
@@ -212,7 +212,7 @@ void HashTable_map(HashTable hashTable, void (*apply)(const void *key, void **va
     }
 }
 
-void **HashTable_toArray(HashTable hashTable, void *end)
+void **HashTable_ToArray(HashTable hashTable, void *end)
 {
     int i, j = 0;
     void **array;

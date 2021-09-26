@@ -4,7 +4,15 @@ void PID_init()
 {
 }
 
-float PID_Release(PID_t *PID, float target, float now)
+/**
+ * @brief 位置式PID
+ * 
+ * @param PID 
+ * @param target 
+ * @param now 
+ * @return float 
+ */
+float PID_GetOutput(PID_t *PID, float target, float now)
 {
   float err;
   float delta_err;
@@ -20,12 +28,32 @@ float PID_Release(PID_t *PID, float target, float now)
 
   PID->int_sum += err * PID->int_duty; // 积分量
 
-  LIMIT(PID->int_sum, PID->int_max); // 限制积分量大小
+  __LIMIT(PID->int_sum, PID->int_max); // 限制积分量大小
   PID->last_delta_err = delta_err;
 
   result = err * PID->Kp + delta_err * PID->Kd + PID->int_sum * PID->Ki;
-  LIMIT(result, PID->ctrl_max);
+  __LIMIT(result, PID->ctrl_max);
   return result;
+}
+
+/**
+ * @brief 增量式PID
+ * 
+ * @param PID 
+ * @param target 
+ * @param now 
+ * @return float 
+ */
+float PID_GetIncrementOutput(PID_t *PID, float target, float now)
+{
+  float err = target - now;
+  float delta = PID->Kp * (err - PID->last_err) +
+                PID->Ki * err +
+                PID->Kd * (err - 2 * PID->last_err + PID->last_last_err);
+  PID->last_last_err = PID->last_err;
+  PID->last_err = err;
+  __LIMIT(delta,PID->ctrl_max);
+  return delta;
 }
 
 void reset_PID(PID_t *s)

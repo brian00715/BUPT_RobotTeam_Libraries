@@ -34,6 +34,7 @@
 /* Public Types---------------------------------------------------*/
 typedef uint32_t systime_t; //为了与本杰明电调代码保持一致
 
+
 /* Datatypes---------------------------------------------------*/
 typedef struct
 {
@@ -75,7 +76,7 @@ typedef enum
 	CAN_PACKET_CONF_FOC_ERPMS,
 	CAN_PACKET_CONF_STORE_FOC_ERPMS,
 	CAN_PACKET_STATUS_5
-} CAN_PACKET_ID;
+} VESC_CAN_PACKET_ID;
 
 // CAN status modes
 typedef enum
@@ -86,7 +87,7 @@ typedef enum
 	CAN_STATUS_1_2_3,
 	CAN_STATUS_1_2_3_4,
 	CAN_STATUS_1_2_3_4_5
-} CAN_STATUS_MODE;
+} VESC_STATUS_MODE;
 
 typedef struct
 {

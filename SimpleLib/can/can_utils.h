@@ -1,59 +1,60 @@
-/*******************************************************************************
- * Copyright:		BUPT
- * File Name:		can_utils.h
- * Description:		CAN 工具函数
- * Author:			ZeroVoid
- * Version:			0.1
- * Data:			2019/09/23 Mon 14:00
- *******************************************************************************/
 #ifndef __CAN_UTILS_H
 #define __CAN_UTILS_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "can.h"
 #include "simplelib_cfg.h"
 #ifdef SL_CAN
 
-// TODO: ZeroVoid	due:10/28	优化CAN callback,增加保存can数据参数.
+    // TODO: ZeroVoid	due:10/28	优化CAN callback,增加保存can数据参数.
 
-typedef union{
-    char ch[8];
-    uint8_t ui8[8];
-    uint16_t ui16[4];
-    int16_t i16[4];
-    int in[2];
-    float fl[2];
-    double df;
-} CANMsg;
+    typedef union CAN_Message_u
+    {
+        char ch[8];
+        uint8_t ui8[8];
+        uint16_t ui16[4];
+        int16_t i16[4];
+        int in[2];
+        float fl[2];
+        double df;
+    } CAN_Message_u;
 
-extern CAN_HandleTypeDef HCAN;
-extern CAN_TxHeaderTypeDef TxHeader;
-extern CAN_RxHeaderTypeDef RxHeader;
-extern CAN_TxHeaderTypeDef ExtTxHeader;
-extern uint32_t TxMailbokx;
-extern CANMsg can_rx_data;
-extern CANMsg can_tx_data;
-extern int can_exc_callback_flag;
-extern int can_rx_callback_flag;
+    typedef struct CAN_ConnMessage_t
+    {
+        uint32_t id; // 标准帧最大 0x7ff, 拓展帧最大 is 0x1FFFFFFF
+        uint8_t rtr; // 是否使用远程发送请求
+        uint8_t len;
+        CAN_Message_u payload;
+    } CAN_ConnMessage_t;
 
-void CAN_Init(CAN_HandleTypeDef *hcan);
-int CAN_SendMsg(uint16_t id, CANMsg *msg);
-int CAN_SendExtMsg(uint32_t id, CANMsg *msg);
-void CAN_CallbackAdd(const uint32_t id, void (*callback)(CANMsg *data));
-void CAN_CallbackExe(void);
-void can_std_mask_filter_conf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_t len, uint32_t bank_num);
-void can_std_list_filter_conf(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t bank_num);
-void can_send_test(void);
+    extern CAN_HandleTypeDef HCAN;
+    extern CAN_TxHeaderTypeDef CAN_TxHeader;
+    extern CAN_RxHeaderTypeDef CAN_RxHeader;
+    extern CAN_TxHeaderTypeDef CAN_ExtTxHeader;
+    extern uint32_t TxMailbokx;
+    extern CAN_Message_u CAN_RxData;
+    extern CAN_Message_u CAN_TxData;
+    extern int CAN_ExeCallback_Flag;
+    extern int CAN_RxCallback_Flag;
 
-void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
-void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan);
-void CAN_RxCallback(CANMsg *data);
+    void CAN_Init(CAN_HandleTypeDef *hcan);
+    int CAN_SendStdMsg(uint16_t std_id, CAN_Message_u *msg);
+    int CAN_SendExtMsg(uint32_t ext_id, CAN_Message_u *msg);
+    void CAN_CallbackAdd(const uint32_t id, void (*callback)(CAN_ConnMessage_t *data));
+    void CAN_CallbackExe(void);
+    void CAN_StdMaskFilterConf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_t len, uint32_t bank_num);
+    void CAN_StdListFilterConf(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t bank_num);
+    void CAN_SendTest(void);
+    void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan);
+    void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan);
+    __weak void CAN_RxCallback(CAN_ConnMessage_t *data);
 
 #ifdef DEBUG
-void can_send_test(void);
+    void can_send_test(void);
 #endif //DEBUG
 
 #endif // SL_CAN

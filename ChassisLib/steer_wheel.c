@@ -4,10 +4,14 @@
  * @date 2020/11/
  ******************************************************************/
 #include "steer_wheel.h"
-#include "chassis_common.h"
 #include "rudder_chassis.h"
-#ifdef USE_RUDDER_CHASSIS
+#include "odrive_can.h"
+#ifdef USE_CHASSIS_RUDDER
 extern RudderChassis_t RudderChassis;
+
+#ifdef DRIVE_MTR_USE_ODRIVE
+ODrive_t odrive[2];
+#endif
 
 //======================================private==========================================
 
@@ -17,18 +21,38 @@ extern RudderChassis_t RudderChassis;
 
 void SW_MotorInit(struct SW_DriveMotor_t *driver_motor, struct SW_SteerMotor_t *steer_motor)
 {
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 4; i++)
     {
 
-        driver_motor->rpm[i] = 0;
-        driver_motor->id[i] = i + VESC_ID_BASE; // 设置本杰明电调ID
+        driver_motor->target_rpm[i] = 0;
+        driver_motor->target_curr[i] = 0;
+        driver_motor->target_duty[i] = 0;
+        driver_motor->motor_mode = MTR_CTRL_RPM;
+        driver_motor->can_id[i] = i + VESC_ID_BASE; // 设置本杰明电调ID
         steer_motor->now_pos[i] = 0;
+
         MotorOn(CAN1, i);
-        PosLoopCfg(CAN1, i, 0, 0, STEER_WHEEL_MAX_SPEED); // 使用位置环模式
+        PosLoopCfg(CAN1, i, 0, 0, STEER_WHEEL_MAX_SPEED); // 舵向轮使用位置环模式
     }
     // 注册函数
-    steer_motor->setPos = SW_SteerMotors_SetPos;
-    driver_motor->setSpeed = SW_DriveMotors_SetSpeed;
+    steer_motor->fSetPos = SW_SteerMotors_SetPos;
+    driver_motor->fSetSpeed = SW_DriveMotors_SetSpeed;
+    driver_motor->fHandbrake = SW_DriveMotors_Handbrake;
+#ifdef DRIVE_MTR_USE_ODRIVE
+    // 配置ODrive模式
+    odrive[0].axis0.set_state.input_mode = ODRIVE_INPUT_MODE_VEL_RAMP;
+    odrive[0].axis1.set_state.input_mode = ODRIVE_INPUT_MODE_VEL_RAMP;
+    odrive[0].axis0.set_state.control_mode = ODRIVE_CTRL_MODE_VEL;
+    odrive[0].axis1.set_state.control_mode = ODRIVE_CTRL_MODE_VEL;
+    odrive[1].axis0.set_state.input_mode = ODRIVE_INPUT_MODE_VEL_RAMP;
+    odrive[1].axis1.set_state.input_mode = ODRIVE_INPUT_MODE_VEL_RAMP;
+    odrive[1].axis0.set_state.control_mode = ODRIVE_CTRL_MODE_VEL;
+    odrive[1].axis1.set_state.control_mode = ODRIVE_CTRL_MODE_VEL;
+    ODrive_CANSendMsg(&hcan1, &odrive[0], AXIS_0, ODRIVE_MSG_SET_CONTROLLER_MODES);
+    ODrive_CANSendMsg(&hcan1, &odrive[0], AXIS_1, ODRIVE_MSG_SET_CONTROLLER_MODES);
+    ODrive_CANSendMsg(&hcan1, &odrive[1], AXIS_0, ODRIVE_MSG_SET_CONTROLLER_MODES);
+    ODrive_CANSendMsg(&hcan1, &odrive[1], AXIS_1, ODRIVE_MSG_SET_CONTROLLER_MODES);
+#endif
 }
 
 int SW_InitCalibration_BreakFlag = 0;
@@ -96,7 +120,9 @@ void SW_InitCalibration()
             DJI_VelCrl(CAN1, 4, 400);
             hall_switch_flag[3] = 0;
         }
-        if (Sum_int16ar(hall_switch_flag, 4) == 4)
+        double result;
+        __SUM_OF_AR(hall_switch_flag, 4, result);
+        if ((int)result == 4)
         {
             break;
         }
@@ -137,12 +163,13 @@ void SW_SteerMotors_SetPos(float target_pos[])
     static int16_t target_pos_int[4];
     for (int i = 0; i < 4; i++)
     {
-        target_pos_int[i] = (int16_t)RAD2ANGLE(target_pos[i]);
+        target_pos_int[i] = (int16_t)__RAD2ANGLE(target_pos[i]);
     }
-    DJI_posCtrlAll(target_pos_int);
+    DJI_PosCtrlAll(target_pos_int);
     RudderChassis.SteerMotors.can_send_flag = 0;
 }
 
+#ifdef DRIVE_MTR_USE_VESC
 /**
  * @brief 向驱动轮电调发送速度命令，将线速度转为电转速
  * 
@@ -155,13 +182,90 @@ void SW_DriveMotors_SetSpeed(float vel[4])
         return;
     for (int i = 0; i < 4; i++)
     {
-        vel[i] = SW_Speed2eRPM(vel[i]); // >>>请根据不同电机进行换算<<<
-        comm_can_set_rpm(RudderChassis.DriveMotors.id[i], vel[i]);
-        //if (3 == i || 2 == i)
-            HAL_Delay(1); // 发送间隔1ms，否则最后一个发不出去
+        vel[i] = SW_Speed2eRPM(vel[i]);
+        comm_can_set_rpm(RudderChassis.DriveMotors.can_id[i], vel[i]);
+        if (1 == i)
+            HAL_Delay(1); // 发送间隔1ms
     }
     RudderChassis.DriveMotors.can_send_flag = 0;
 }
+
+void SW_DriveMotors_SetCurr(float current[4])
+{
+    if (!RudderChassis.DriveMotors.can_send_flag) // 控制发送周期
+        return;
+    for (int i = 0; i < 4; i++)
+    {
+        comm_can_set_current(RudderChassis.DriveMotors.can_id[i], current[i]);
+        if (2 == i)
+            HAL_Delay(1); // 发送间隔1ms
+    }
+    RudderChassis.DriveMotors.can_send_flag = 0;
+}
+
+void SW_DriveMotors_SetDuty(float duty[4])
+{
+    if (!RudderChassis.DriveMotors.can_send_flag) // 控制发送周期
+        return;
+    for (int i = 0; i < 4; i++)
+    {
+        comm_can_set_duty(RudderChassis.DriveMotors.can_id[i], duty[i]);
+        if (2 == i)
+            HAL_Delay(1); // 发送间隔1ms
+    }
+    RudderChassis.DriveMotors.can_send_flag = 0;
+}
+
+/**
+ * @brief 手刹模式
+ * 
+ * @param hand_brake_current 手刹电流
+ */
+void SW_DriveMotors_Handbrake(float hand_brake_current)
+{
+    if (!RudderChassis.DriveMotors.can_send_flag) // 控制发送周期
+        return;
+    for (int i = 0; i < 4; i++)
+    {
+        comm_can_set_handbrake(RudderChassis.DriveMotors.can_id[i], hand_brake_current);
+        if (2 == i)
+            HAL_Delay(1); // 发送间隔1ms
+    }
+}
+#endif
+
+#ifdef DRIVE_MTR_USE_ODRIVE
+/**
+ * @brief 使用ODrive驱动器时的速度设定函数
+ * 
+ * @param vel 
+ */
+void SW_DriveMotors_SetSpeed(float vel[4])
+{
+    if (!RudderChassis.DriveMotors.can_send_flag) // 控制发送频率
+        return;
+    for (int i = 0; i < 4; i++)
+    {
+        vel[i] = SW_Speed2eRPM(vel[i]); // >>>请根据不同电机进行换算<<<
+        if (2 == i)
+            HAL_Delay(1); // 发送间隔1ms
+    }
+    odrive[0].axis0.mtr_id = RudderChassis.DriveMotors.can_id[0];
+    odrive[0].axis0.mtr_id = RudderChassis.DriveMotors.can_id[1];
+    odrive[1].axis1.mtr_id = RudderChassis.DriveMotors.can_id[2];
+    odrive[1].axis1.mtr_id = RudderChassis.DriveMotors.can_id[3];
+    odrive[0].axis0.set_state.input_vel = RudderChassis.DriveMotors.target_rpm[0];
+    odrive[0].axis0.set_state.input_vel = RudderChassis.DriveMotors.target_rpm[1];
+    odrive[1].axis1.set_state.input_vel = RudderChassis.DriveMotors.target_rpm[2];
+    odrive[1].axis1.set_state.input_vel = RudderChassis.DriveMotors.target_rpm[3];
+    ODrive_CANSendMsg(&hcan1, &odrive[0], AXIS_0, ODRIVE_MSG_SET_INPUT_VEL);
+    ODrive_CANSendMsg(&hcan1, &odrive[0], AXIS_1, ODRIVE_MSG_SET_INPUT_VEL);
+    HAL_Delay(1); // 发两个顿一下，不然CAN发送邮箱会炸
+    ODrive_CANSendMsg(&hcan1, &odrive[1], AXIS_0, ODRIVE_MSG_SET_INPUT_VEL);
+    ODrive_CANSendMsg(&hcan1, &odrive[1], AXIS_1, ODRIVE_MSG_SET_INPUT_VEL);
+    RudderChassis.DriveMotors.can_send_flag = 0;
+}
+#endif
 
 /**
  * @brief 将底盘速度m/s转为电机电转速
@@ -178,7 +282,7 @@ void SW_SteerMotors_LimitPos(float pos[4])
 {
     for (int i = 0; i < 4; i++)
     {
-        LIMIT_FROM_TO(pos[i], STEER_WHEEL_MIN_POS, STEER_WHEEL_MAX_POS);
+        __LIMIT_FROM_TO(pos[i], STEER_WHEEL_MIN_POS, STEER_WHEEL_MAX_POS);
     }
 }
 
@@ -206,7 +310,7 @@ void SW_PrintMotorStatus()
     for (int i = 0; i < 4; i++)
     {
         //除以减速比得到舵轮的实际位置
-        uprintf("[%d]%.2f ", i, RAD2ANGLE(RM_MotorStatus[i].pos / STEER_WHEEL_REDUCTION_RATIO));
+        uprintf("[%d]%.2f ", i, __RAD2ANGLE(RM_MotorStatus[i].pos / STEER_WHEEL_REDUCTION_RATIO));
     }
     uprintf("<\r\n");
 }
@@ -221,14 +325,14 @@ void SW_DriveMotors_LimitSpeed(float speed[4])
 {
     for (int i = 0; i < 4; i++)
     {
-        if (speed[i] < 0)
-        {
-            speed[i] *= -1;
-            LIMIT_FROM_TO(speed[i], DRIVE_WHEEL_MIN_SPEED, DRIVE_WHEEL_MAX_SPEED);
-            speed[i] *= -1;
-            continue;
-        }
-        LIMIT_FROM_TO(speed[i], DRIVE_WHEEL_MIN_SPEED, DRIVE_WHEEL_MAX_SPEED);
+        // if (speed[i] < 0) // 舵向角度差[90,270]反转的情况
+        // {
+        //     speed[i] *= -1;
+        //     LIMIT(speed[i], DRIVE_WHEEL_MAX_SPEED);
+        //     speed[i] *= -1;
+        //     continue;
+        // }
+        __LIMIT(speed[i], DRIVE_WHEEL_MAX_SPEED);
     }
 }
 //=======================================END=============================================

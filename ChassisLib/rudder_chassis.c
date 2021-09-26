@@ -6,24 +6,19 @@
  *       x轴正方向定义为绿色12V开关侧
  ******************************************************************/
 #include "rudder_chassis.h"
+#include "motor_driver.h"
 
-#ifdef USE_RUDDER_CHASSIS
+#ifdef USE_CHASSIS_RUDDER
 #include <stdlib.h>
 
 //========================================private========================================
-// 加入自转时速度分量的叠加量应乘以的系数{kx,ky}，对应轮子编号.
-static const int8_t prvOmegaRatio[4][2] = {{-1, -1}, {-1, 1}, {1, 1}, {1, -1}};
 //==========================================END=============================================
 
 //========================================public========================================
 RudderChassis_t RudderChassis; // 底盘全局结构体
 
 extern PID_t NormalCorrPID_x, NormalCorrPID_y; //法向修正向量PD控制
-/* 轨迹跟踪时最优PID参数 
-   单独调试时最优PID参数0.9, 1.5, 0.005, 0, 0, 10, 0, 1.0*/
-extern PID_t YawPID; //偏航角控制，ω=f(Δθ)
-/* 轨迹跟踪时最优YawPID参数0.75, 1.5, 0.0472, 0, 0, 10, 0, 5.0
-   单独调试时最优YawPID参数1.8, 2.5, 0.0472, 0, 0, 10, 0, 4.5*/
+extern PID_t YawPID;                           //偏航角控制，ω=f(Δθ)
 //==========================================END=============================================
 
 /**
@@ -32,16 +27,16 @@ extern PID_t YawPID; //偏航角控制，ω=f(Δθ)
 void RudderChassis_Init()
 {
     BaseChassis_Init();
+    SW_MotorInit(&RudderChassis.DriveMotors, &RudderChassis.SteerMotors);
     RudderChassis.base = &BaseChassis;
 
     // 关联函数指针
     RudderChassis.base->fChassisMove = RudderChassis_Move;
 
-    SW_MotorInit(&RudderChassis.DriveMotors, &RudderChassis.SteerMotors);
     RudderChassis.base->ctrl_mode = CTRL_MODE_NONE;
     RudderChassis.base->pos_mode = POS_MODE_RELATIVE;
     NormalCorrPID_x.Kp = 0.9;
-    NormalCorrPID_x.Ki = 0.005;
+    NormalCorrPID_x.Ki = 0.00;
     NormalCorrPID_x.Kd = 1.5;
     NormalCorrPID_x.int_max = 10;
     NormalCorrPID_x.int_duty = 1.0;
@@ -50,11 +45,11 @@ void RudderChassis_Init()
     NormalCorrPID_y.Kd = 1.5;
     NormalCorrPID_y.int_max = 10;
     NormalCorrPID_y.int_duty = 1.0;
-    YawPID.Kp = 0.75;
-    YawPID.Ki = 0.0472;
-    YawPID.Kd = 1.5;
+    YawPID.Kp = 3.5;
+    YawPID.Ki = 0.01;
+    YawPID.Kd = 0.0;
     YawPID.int_max = 10;
-    YawPID.int_duty = 5.0;
+    YawPID.int_duty = 10.0;
 }
 
 extern float CMD_TargetYaw;
@@ -65,10 +60,12 @@ int RudderPointSetIndex = 0; // 点集下标
   */
 void RudderChassis_Exe()
 {
-    // 不同的控制模式决定target更新的方式
+    Chassis_UpdatePostureStatus();
+
     switch (RudderChassis.base->ctrl_mode)
     {
     case CTRL_MODE_NONE:
+        RudderChassis_Move(0, RudderChassis.base->target_dir, 0);
         break;
     case CTRL_MODE_HANDLE:
         Handle_Exe();
@@ -78,7 +75,7 @@ void RudderChassis_Exe()
         break;
     case CTRL_MODE_CMD:
         RudderChassis.base->target_speed = CMD_TargetSpeed;
-        RudderChassis.base->target_dir = ANGLE2RAD(CMD_TargetDir);
+        RudderChassis.base->target_dir = CMD_TargetDir;
         RudderChassis.base->target_omega = CMD_TargetOmega;
         RudderChassis_Move(RudderChassis.base->target_speed,
                            RudderChassis.base->target_dir,
@@ -87,6 +84,12 @@ void RudderChassis_Exe()
     case CTRL_MODE_TRACK:
         RudderChassis.base->pos_mode = POS_MODE_ABSOLUTE;
         Chassis_TrackPathSets(RudderChassis.base->TrackStatus.path_index);
+        break;
+    case CTRL_MODE_GO_TO_POINT:
+        Chassis_Go2Point(CMD_Chassis_TargetPoint, CMD_Chassis_TargetYaw);
+        RudderChassis_Move(RudderChassis.base->target_speed,
+                           RudderChassis.base->target_dir,
+                           RudderChassis.base->target_omega);
         break;
     case CTRL_MODE_TUNING:
         Chassis_YawTuning(CMD_TargetYaw);
@@ -99,6 +102,8 @@ void RudderChassis_Exe()
     }
 }
 
+// 加入自转时速度分量的叠加量应乘以的系数{kx,ky}，对应轮子编号.
+static const int8_t omega_ratio[4][2] = {{-1, -1}, {-1, 1}, {1, 1}, {1, -1}};
 /**
  * @brief 底盘速度矢量映射为四个轮子的线速度与舵向角
  * @param speed 速度大小/rpm
@@ -121,7 +126,7 @@ void RudderChassis_Move(float speed, float dir, float omega)
     dir -= absolute_angle_offset;
     float vx = speed * cos(dir); // 速度分量
     float vy = speed * sin(dir);
-    LIMIT(omega, MAX_ROTATE_VEL); // omega需要参与运算，故提前限制大小
+    __LIMIT(omega, MAX_ROTATE_VEL); // omega需要参与运算，故提前限制大小
     float target_pos[4];
     float target_speed[4];
     if (speed != 0 || omega != 0)
@@ -130,15 +135,16 @@ void RudderChassis_Move(float speed, float dir, float omega)
         {
             float self_turn_vel_x = omega * RudderChassis_Front2Back / 2; // 自转切向速度的分量
             float self_turn_vel_y = omega * RudderChassis_Left2Right / 2;
-            float vel_sum_x = vx + prvOmegaRatio[i][0] * self_turn_vel_x; // 速度合成，考虑底盘形状
-            float vel_sum_y = vy + prvOmegaRatio[i][1] * self_turn_vel_y;
+            float vel_sum_x = vx + omega_ratio[i][0] * self_turn_vel_x; // 速度合成，考虑底盘形状
+            float vel_sum_y = vy + omega_ratio[i][1] * self_turn_vel_y;
             float real_vel = sqrt(pow(vel_sum_x, 2) + pow(vel_sum_y, 2));
             float real_dir = atan2f(vel_sum_y, vel_sum_x); // 附加角速度后的真实速度方向
             RudderChassis_TurnMinorArc(RM_MotorStatus[i].pos / STEER_WHEEL_REDUCTION_RATIO, &real_dir, &real_vel);
 #ifdef DEBUG
             //uprintf("--[%d]target_speed=%.4f target_dir=%d\r\n", i, real_vel, real_dir);
 #endif
-            target_pos[i] = real_dir * STEER_WHEEL_REDUCTION_RATIO; // 乘舵轮减速比
+            target_pos[i] = real_dir * STEER_WHEEL_REDUCTION_RATIO;                                        // 乘舵轮减速比
+            real_vel = real_vel > 0 ? real_vel + DRIVE_WHEEL_MIN_SPEED : real_vel - DRIVE_WHEEL_MIN_SPEED; // 补偿启动速度
             target_speed[i] = real_vel;
         }
     }
@@ -157,8 +163,15 @@ void RudderChassis_Move(float speed, float dir, float omega)
     SW_DriveMotors_LimitSpeed(target_speed);
 
     //向驱动板发送命令
-    RudderChassis.SteerMotors.setPos(target_pos);
-    RudderChassis.DriveMotors.setSpeed(target_speed);
+    RudderChassis.SteerMotors.fSetPos(target_pos);
+    if (RudderChassis.base->handbrake_flag)
+    {
+        RudderChassis.DriveMotors.fHandbrake(10.0);
+    }
+    else
+    {
+        RudderChassis.DriveMotors.fSetSpeed(target_speed);
+    }
 }
 
 /**
@@ -168,7 +181,7 @@ void RudderChassis_TurnMinorArc(float now_dir, float *target_dir, float *target_
 {
     float delta_dir = *target_dir - now_dir; // 偏差量
 
-    if (fabs(delta_dir) > ANGLE2RAD(90) && fabs(delta_dir) < ANGLE2RAD(270))
+    if (fabs(delta_dir) > __ANGLE2RAD(90) && fabs(delta_dir) < __ANGLE2RAD(270))
     {
         if (*target_dir < 0)
         {
@@ -182,20 +195,19 @@ void RudderChassis_TurnMinorArc(float now_dir, float *target_dir, float *target_
     }
     else
     {
-      if(fabs(delta_dir)>ANGLE2RAD(270))
-      {
-         uprintf(">270,delta_dir:%.2f\r\n",delta_dir);
-         if(delta_dir>ANGLE2RAD(270))
-         {
-           delta_dir -= 6.28;
-         }
-         else if (delta_dir<-ANGLE2RAD(270))
-         {
-         delta_dir+=6.28;
-         }
-           
-      }
-      *target_dir = now_dir + delta_dir;
+        if (fabs(delta_dir) > __ANGLE2RAD(270))
+        {
+            //  uprintf(">270,delta_dir:%.2f\r\n",delta_dir);
+            if (delta_dir > __ANGLE2RAD(270))
+            {
+                delta_dir -= 6.28;
+            }
+            else if (delta_dir < -__ANGLE2RAD(270))
+            {
+                delta_dir += 6.28;
+            }
+        }
+        *target_dir = now_dir + delta_dir;
     }
     if (TimeFlag_100ms)
     {
@@ -254,7 +266,7 @@ void RudderChassis_Rotate(float target_yaw)
     //         }
     //         reverse_flag = 1;
     //     }
-    //     if (fabs(delta_angle) < ANGLE2RAD(60)) // 差值大于60°不分配速度
+    //     if (fabs(delta_angle) < __ANGLE2RAD(60)) // 差值大于60°不分配速度
     //     {
     //         target_speed[i] = fabs(self_turn_vel / cos(delta_angle));
     //         if (reverse_flag)
@@ -297,7 +309,7 @@ void RudderChassis_Rotate(float target_yaw)
         target_speed[3] = self_turn_vel;
     }
 
-    RudderChassis.DriveMotors.setSpeed(target_speed);
+    RudderChassis.DriveMotors.fSetSpeed(target_speed);
     // ## 舵向不变 ##
 
     // if (TimeFlag_20ms)
@@ -315,11 +327,11 @@ void RudderChassis_Rotate(float target_yaw)
 void RudderChassis_SingleCtrl(int index, float speed, float dir)
 {
     // 数值限位
-    LIMIT(speed, DRIVE_WHEEL_MAX_SPEED);
-    LIMIT(dir, STEER_WHEEL_MAX_POS);
+    __LIMIT(speed, DRIVE_WHEEL_MAX_SPEED);
+    __LIMIT(dir, STEER_WHEEL_MAX_POS);
     //向驱动板发送命令
-    DJI_PosCtrl(CAN1, index, ABSOLUTE_MODE, (int32_t)RAD2ANGLE(dir * STEER_WHEEL_REDUCTION_RATIO));
-    comm_can_set_rpm(RudderChassis.DriveMotors.id[index], speed);
+    DJI_PosCtrl(CAN1, index, ABSOLUTE_MODE, (int32_t)__RAD2ANGLE(dir * STEER_WHEEL_REDUCTION_RATIO));
+    comm_can_set_rpm(RudderChassis.DriveMotors.can_id[index], speed);
 }
 
 /**
@@ -340,9 +352,8 @@ void RudderChassis_CtrlYaw(float yaw, uint32_t max_omega)
         PosLoopCfg(CAN1, i + 1, 0, 0, max_omega);
         pos[i] = yaw;
     }
-    RudderChassis.SteerMotors.setPos(pos);
+    RudderChassis.SteerMotors.fSetPos(pos);
 }
-
 
 //==========================================END=============================================
 #endif

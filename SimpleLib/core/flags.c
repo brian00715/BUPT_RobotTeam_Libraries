@@ -9,7 +9,7 @@
 #include "flags.h"
 
 /* CAN Callback -----------------------------------------------------*/
-int can_exc_callback_flag = 0;
+int CAN_ExeCallback_Flag = 0;
 
 /* CMD_DMA -----------------------------------------------------*/
 int DMA_RxOK_Flag = 0;

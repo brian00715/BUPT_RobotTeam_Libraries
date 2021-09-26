@@ -17,7 +17,7 @@ extern "C"
 #include "motor_driver.h"
 #include "vesc_can.h"
 #include <stdlib.h>
-#include "dji_ctr.h"
+#include "dji_board_can.h"
 #include <string.h>
 
 void cmd_func_init(void);

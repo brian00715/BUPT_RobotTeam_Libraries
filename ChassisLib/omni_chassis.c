@@ -8,18 +8,18 @@
  * @copyright Copyright (c) 2021
  * 
  */
-#include "chassis_common.h"
+#include "base_chassis.h"
 #include "omni_chassis.h"
 #include "common_config.h"
 #include "can_utils.h"
 #include "utils.h"
 #include "handle.h"
 
-#ifdef USE_OMNI_CHASSIS
+#ifdef USE_CHASSIS_OMNI
 
 OmniChassis_t OmniChassis;
 static float InstallAngle[4] = {-2.3561945625, 2.3561945625, -0.7853981875, 0.7853981875}; // 车轮正方形与底盘坐标系x轴的夹角/rad
-static CANMsg MotorRpmCANMsg[4];
+static CAN_Message_u MotorRpmCANMsg[4];
 char MotorCANSendFlag = 0; // 需要在定时中断中置1，控制发送频率
 
 /**
@@ -79,7 +79,7 @@ void OmniChassis_Init()
     for (int i = 0; i < 4; i++)
     {
         // VESC_Init(&OmniChassis.drive_motors[i],i + OMNI_DRIVE_MOTOR_BASE_CANID,(VESCMode)VESC_RPM); // 若使用本杰明驱动器
-        MotorDriver_Init(&OmniChassis.drive_motors[i], i + OMNI_DRIVE_MOTOR_BASE_CANID, DRIVER_RPM); // 若使用BUPT自制驱动卡
+        MotorDriver_Init(&OmniChassis.drive_motors[i], i + OMNI_DRIVE_MOTOR_BASE_CANID, MTR_CTRL_RPM); // 若使用BUPT自制驱动卡
     }
     OmniChassis.motor_can_flag = 0;
 }
@@ -100,7 +100,7 @@ void OmniChassis_Exe()
         break;
     case CTRL_MODE_CMD:
         OmniChassis.base->target_speed = CMD_TargetSpeed;
-        OmniChassis.base->target_dir = ANGLE2RAD(CMD_TargetDir);
+        OmniChassis.base->target_dir = __ANGLE2RAD(CMD_TargetDir);
         OmniChassis.base->target_omega = CMD_TargetOmega;
         OmniChassis.base->fChassisMove(OmniChassis.base->target_speed, OmniChassis.base->target_dir, OmniChassis.base->target_omega); // 底层执行函数
         break;

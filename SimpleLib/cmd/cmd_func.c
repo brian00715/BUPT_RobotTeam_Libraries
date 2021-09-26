@@ -1,6 +1,8 @@
 #include "cmd_func.h"
-#include "chassis_common.h"
-#include "robomaster.h"
+#include "base_chassis.h"
+#include "rm_cxxx_can.h"
+#include "rudder_chassis.h"
+#include "motor_driver.h"
 
 void CMD_Hello(int argc, char *argv[])
 {
@@ -8,6 +10,7 @@ void CMD_Hello(int argc, char *argv[])
 }
 
 //laser
+#ifdef USE_LASER
 void cmd_laser_print_diatance(int argc, char *argv[])
 {
     laser_print_distance();
@@ -39,61 +42,9 @@ void CMD_Laser_SwitchPrintADCValue(int argc, char *argv[])
         uprintf("--CMD:Stop print laser adc value (%d)\r\n", Laser_PrintADCValue_Flag);
     }
 }
-
-//point
-void CMD_Point_PrintPath(int argc, char *argv[])
-{
-    point_print_path();
-}
+#endif // USE_LASER
 
 /********************************[电机上位机控制]***********************************/
-extern DJIMotor_t DJIMotor[4];
-/*设置m2006的参数，用以手动控制*/
-void CMD_M2006_SetCurrent(int argc, char *argv[])
-{
-    uint8_t index = atoi(argv[1]);
-    DJIMotor[index].target_current = atoi(argv[2]);
-    uprintf("M2006 current is %f.\r\n", atoi(argv[2]));
-}
-
-/*设置本杰明电调的参数,用以手动控制*/
-void CMD_VESC_SetParam(int argc, char *argv[])
-{
-    vesc.mode = atoi(argv[1]);
-    switch (vesc.mode)
-    {
-    case 0:
-    {
-        vesc.target_duty = atof(argv[2]);
-        uprintf("--Vesc work in Duty at %f\r\n", atof(argv[2]));
-        break;
-    }
-    case 1:
-    {
-        vesc.target_current = atof(argv[2]);
-        uprintf("--Vesc work in Current at %f\r\n", atof(argv[2]));
-        break;
-    }
-    case 2:
-    {
-        vesc.target_rpm = atof(argv[2]);
-        uprintf("--Vesc work in RPM at %f\r\n", atof(argv[2]));
-        break;
-    }
-    case 3:
-    {
-        vesc.target_position = atof(argv[2]);
-        uprintf("--Vesc work in Position at %f\r\n", atof(argv[2]));
-        break;
-    }
-    default:
-    {
-        uprintf("--parameter explain:\r\n ");
-        uprintf("  0:duty\r\n1:current\r\n2:speed\r\n3:position\r\n");
-        break;
-    }
-    }
-}
 
 void CMD_VESC_SwitchPrintInfo(int argc, char *argv[])
 {
@@ -108,7 +59,15 @@ void CMD_VESC_SwitchPrintInfo(int argc, char *argv[])
         uprintf("--VESC PrintInfo Opened!\r\n");
     }
 }
-
+#ifdef USE_MTR_DRIVER_RM_CXXX
+extern DJIMotor_t DJIMotor[4];
+/*设置m2006的参数，用以手动控制*/
+void CMD_M2006_SetCurrent(int argc, char *argv[])
+{
+    uint8_t index = atoi(argv[1]);
+    DJIMotor[index].target_current = atoi(argv[2]);
+    uprintf("M2006 current is %f.\r\n", atoi(argv[2]));
+}
 void CMD_Robomaster_SetRPM(int argc, char *argv[])
 {
     RM_RPMControl_Flag = 1;
@@ -144,14 +103,6 @@ void CMD_Robomaster_SetPosition(int argc, char *argv[])
             DJIMotor[2].target_position, DJIMotor[3].target_position);
 }
 
-void CMD_Robomater_StopByAngle(int argc, char *argv[])
-{
-    Robomaster_OpenAngleControl_Flag = 1;
-    Robomaster_TargetOffsetAngle = (uint32_t)atoi(argv[1]);
-    // MoterDriver_M2006_Current = atof(argv[2]);
-    uprintf("--robomaster motor will stop when rotated by %d degrees.\r\n", Robomaster_TargetOffsetAngle);
-}
-
 /*输入0关闭串口打印，输入1开启*/
 void CMD_Robomaster_SwitchPrintInfo(int argc, char *argv[])
 {
@@ -166,8 +117,9 @@ void CMD_Robomaster_SwitchPrintInfo(int argc, char *argv[])
         uprintf("--Robomaster PrintInfo Opened!\r\n");
     }
 }
+#endif // DIRECT_CTRL_RM
 
-void cmd_robomaster_control(int argc, char *argv[])
+void CMD_RMMtr_Ctrl(int argc, char *argv[])
 {
     if (strcmp(argv[1], "motoron") == 0)
     {
@@ -256,7 +208,7 @@ void cmd_robomaster_control(int argc, char *argv[])
             uprintf("%d ", pos[i]);
         }
         uprintf("\r\n");
-        DJI_posCtrlAll(pos);
+        DJI_PosCtrlAll(pos);
     }
     else if (strcmp(argv[1], "queryallpos") == 0)
     {
@@ -268,69 +220,83 @@ void cmd_robomaster_control(int argc, char *argv[])
 
 /********************************END***********************************/
 
-int16_t Chassis_MoterDuty[3];
 /********************************[底盘控制]***********************************/
-void CMD_Chassis_Move(int argc, char *argv[])
-{
-    // test_value[0] = atof(argv[1]);
-    // test_value[1] = atof(argv[2]);
-    // test_value[2] = atof(argv[3]);
-    Chassis_MoterDuty[0] = atoi(argv[1]);
-    Chassis_MoterDuty[1] = atoi(argv[2]);
-    Chassis_MoterDuty[2] = atoi(argv[3]);
-    uprintf("move in duty of %d  %d %d\r\n", Chassis_MoterDuty[0],
-            Chassis_MoterDuty[1], Chassis_MoterDuty[2]);
-}
-
 extern float CMD_TargetSpeed;
 extern float CMD_TargetDir;
 extern float CMD_TargetOmega;
 void CMD_Chassis_Teleop_Acc(int argc, char **argv)
 {
-    CMD_TargetSpeed += 0.1;
+    CMD_TargetSpeed += 0.05;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_Dec(int argc, char **argv)
 {
-    CMD_TargetSpeed -= 0.1;
+    CMD_TargetSpeed -= 0.05;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_GoAhead(int argc, char **argv)
 {
     CMD_TargetOmega = 0;
-    CMD_TargetSpeed = 0.3;
+    CMD_TargetSpeed += 0.01;
+    CMD_TargetDir = 1.5708;
+    uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
+}
+
+void CMD_Chassis_Teleop_GoBack(int argc, char **argv)
+{
+    CMD_TargetOmega = 0;
+    CMD_TargetSpeed -= 0.01;
+    CMD_TargetDir = 1.5708;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_TurnLeft(int argc, char **argv)
 {
-    CMD_TargetOmega += 5;
+    CMD_TargetOmega = 0.5;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_TurnRight(int argc, char **argv)
 {
-    CMD_TargetOmega -= 5;
+    CMD_TargetOmega = -0.5;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_Stop(int argc, char **argv)
 {
     CMD_TargetSpeed = 0;
+    CMD_TargetOmega = 0;
+    RudderChassis.DriveMotors.motor_mode = MTR_CTRL_RPM;
+    for (int i = 0; i < 4; i++)
+    {
+        RudderChassis.DriveMotors.target_rpm[i] = 0;
+    }
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_ShiftRight(int argc, char **argv)
 {
-    CMD_TargetDir = 0;
+    CMD_TargetDir -= __ANGLE2RAD(5);
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 void CMD_Chassis_Teleop_ShiftLeft(int argc, char **argv)
 {
-    CMD_TargetDir = 180;
+    CMD_TargetDir += __ANGLE2RAD(5);
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
+}
+
+void CMD_Chassis_SetTargetPoint(int argc, char **argv)
+{
+    float x = atof(argv[1]);
+    float y = atof(argv[2]);
+    float yaw = atof(argv[3]);
+    CMD_Chassis_TargetPoint.x = x;
+    CMD_Chassis_TargetPoint.y = y;
+    CMD_Chassis_TargetYaw = yaw;
+    RudderChassis.base->TrackStatus.go2point_start = 1;
+    uprintf("CMD|Target point set to (%.2f,%.2f,,%.2f)\r\n", x, y, yaw);
 }
 
 /**
@@ -381,7 +347,8 @@ void CMD_ChangePosMode(int argc, char **argv)
 
 void CMD_ChangeCtrlMode(int argc, char **argv)
 {
-    BaseChassis.ctrl_mode = (BaseChassis.ctrl_mode + 1) % 4;
+    BaseChassis.ctrl_mode = (BaseChassis.ctrl_mode + 1) % 5;
+    RudderChassis.base->handbrake_flag = 0;
     uprintf("--CMD|Ctrl mode change to %d\r\n", BaseChassis.ctrl_mode);
 }
 
@@ -390,7 +357,7 @@ extern char YawTuning_Start;
 void CMD_YawTuning(int argc, char **argv)
 {
     BaseChassis.ctrl_mode = CTRL_MODE_TUNING;
-    CMD_TargetYaw = ANGLE2RAD(atof(argv[1]));
+    CMD_TargetYaw = __ANGLE2RAD(atof(argv[1]));
     extern PID_t YawPID;
     float kp = atof(argv[2]);
     float kd = atof(argv[3]);
@@ -401,7 +368,8 @@ void CMD_YawTuning(int argc, char **argv)
     YawPID.Kd = kd;
     YawPID.Ki = ki;
     YawPID.int_duty = int_duty;
-    uprintf("--CMD|TargetYaw:%.2f kp:%.2f kd:%.2f ki:%.2f int_duty:%.2f start_flag:%d \r\n", CMD_TargetYaw, kp, kd, ki, int_duty, YawTuning_Start);
+    uprintf("--CMD|TargetYaw:%.2f kp:%.2f kd:%.2f ki:%.2f int_duty:%.2f start_flag:%d \r\n",
+            CMD_TargetYaw, kp, kd, ki, int_duty, YawTuning_Start);
 }
 
 /**
@@ -420,6 +388,32 @@ void CMD_SetYawPID(int argc, char **argv)
     YawPID.int_duty = int_duty;
     uprintf("--CMD|YawPID - kp:%.2f kd:%.2f ki:%.2f int_duty:%.2f \r\n",
             kp, kd, ki, int_duty);
+}
+
+void CMD_SetDriveMotorsCurr(int argc, char **argv)
+{
+    RudderChassis.DriveMotors.target_curr[0] = atof(argv[1]);
+    RudderChassis.DriveMotors.target_curr[1] = atof(argv[2]);
+    RudderChassis.DriveMotors.target_curr[2] = atof(argv[3]);
+    RudderChassis.DriveMotors.target_curr[3] = atof(argv[4]);
+    uprintf("--CMD|Curr:[0]:%.2f [1]:%.2f [2]:%.2f [3]:%.2f\r\n",
+            RudderChassis.DriveMotors.target_curr[0],
+            RudderChassis.DriveMotors.target_curr[1],
+            RudderChassis.DriveMotors.target_curr[2],
+            RudderChassis.DriveMotors.target_curr[3]);
+}
+
+void CMD_SetDriveMotorsDuty(int argc, char **argv)
+{
+    RudderChassis.DriveMotors.target_duty[0] = atof(argv[1]);
+    RudderChassis.DriveMotors.target_duty[1] = atof(argv[2]);
+    RudderChassis.DriveMotors.target_duty[2] = atof(argv[3]);
+    RudderChassis.DriveMotors.target_duty[3] = atof(argv[4]);
+    uprintf("--CMD|duty:[0]:%.2f [1]:%.2f [2]:%.2f [3]:%.2f\r\n",
+            RudderChassis.DriveMotors.target_duty[0],
+            RudderChassis.DriveMotors.target_duty[1],
+            RudderChassis.DriveMotors.target_duty[2],
+            RudderChassis.DriveMotors.target_duty[3]);
 }
 
 /**
@@ -444,6 +438,22 @@ void CMD_SetNormalCorrPID(int argc, char **argv)
             kp, kd, ki, int_duty);
 }
 
+/**
+ * @brief 设置原地锁定PID参数 
+ */
+void CMD_SetLockPID(int argc, char **argv)
+{
+    extern PID_t LockPID;
+    float kp = atof(argv[1]);
+    float kd = atof(argv[2]);
+    float ki = atof(argv[3]);
+    LockPID.Kp = kp;
+    LockPID.Kd = kd;
+    LockPID.Ki = ki;
+    uprintf("--CMD|LockPID - kp:%.2f kd:%.2f ki:%.2f \r\n",
+            kp, kd, ki);
+}
+
 void CMD_SwitchPrintMotorStatus(int argc, char **argv)
 {
     extern uint8_t SW_PrintMotorStatus_Flag;
@@ -458,18 +468,16 @@ void CMD_SwitchPrintMotorStatus(int argc, char **argv)
     }
 }
 
+
 /********************************END***********************************/
 
 void cmd_func_init(void)
 {
     cmd_add("hello", "", CMD_Hello);
-    //point
-    cmd_add("point_print_path", "", CMD_Point_PrintPath);
 
     //motor
-    cmd_add("vesc", "<mode(0,1,2)> <value>", CMD_VESC_SetParam);
     cmd_add("vesc_switch_print_info", "0 to close;1 to open", CMD_VESC_SwitchPrintInfo);
-    cmd_add("rm", "", cmd_robomaster_control);
+    cmd_add("rm", "", CMD_RMMtr_Ctrl);
     cmd_add("SwitchPrintMotorStatus", "press to change ", CMD_SwitchPrintMotorStatus);
 
     //chassis
@@ -480,18 +488,25 @@ void cmd_func_init(void)
     cmd_add("YawTuning", "<TargetYaw><kp><kd><ki><intTime><StartFlag>", CMD_YawTuning);
     cmd_add("SetYawPID", "<kp><kd><ki><intTime>", CMD_SetYawPID);
     cmd_add("SetNormalCorrPID", "<kp><kd><ki><intTime>", CMD_SetNormalCorrPID);
+    cmd_add("SetDriveMotorCurr", "", CMD_SetDriveMotorsCurr);
+    cmd_add("SetDriveMotorDuty", "", CMD_SetDriveMotorsDuty);
+    cmd_add("SetTargetPoint", "<x><y>", CMD_Chassis_SetTargetPoint);
+    cmd_add("SetLockPID", "", CMD_SetLockPID);
 
     // teleop
     cmd_add("Teleop_Acc", "", CMD_Chassis_Teleop_Acc);
     cmd_add("Teleop_Dec", "", CMD_Chassis_Teleop_Dec);
+    cmd_add("Teleop_GoAhead", "", CMD_Chassis_Teleop_GoAhead);
+    cmd_add("Teleop_GoBack", "", CMD_Chassis_Teleop_GoBack);
     cmd_add("Teleop_TurnLeft", "", CMD_Chassis_Teleop_TurnLeft);
     cmd_add("Teleop_TurnRight", "", CMD_Chassis_Teleop_TurnRight);
-    cmd_add("Teleop_ShiftLeft", "", CMD_Chassis_Teleop_TurnLeft);
-    cmd_add("Teleop_ShiftRight", "", CMD_Chassis_Teleop_TurnRight);
+    cmd_add("Teleop_ShiftLeft", "", CMD_Chassis_Teleop_ShiftLeft);
+    cmd_add("Teleop_ShiftRight", "", CMD_Chassis_Teleop_ShiftRight);
     cmd_add("Teleop_Stop", "", CMD_Chassis_Teleop_Stop);
 
-    //laser
+#ifdef USE_LASER
     cmd_add("laser_print_diatance", "", cmd_laser_print_diatance);
     cmd_add("laser_switch_print_pos", "", CMD_Laser_SwitchPrintPos);
     cmd_add("laser_switch_print_adc_value", "", CMD_Laser_SwitchPrintADCValue);
+#endif
 }

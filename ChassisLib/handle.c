@@ -4,7 +4,7 @@
  * @date 2020/11/9
 *******************************************************************************/
 #include "handle.h"
-#include "chassis_common.h"
+#include "base_chassis.h"
 #include "rudder_chassis.h"
 #include "omni_chassis.h"
 #include "utils.h"
@@ -29,12 +29,12 @@ extern int PrintChassisStatus_Flag;
  * 
  * @param data 
  */
-void Handle_Button(CANMsg *data)
+void CAN_Callback_Handle_Button(CAN_ConnMessage_t *data)
 {
     uint8_t id;
-    if ((uint8_t)data->ui8[2] == 1)                           // D2为弹起标志位，按下为1|按键按下时才解析指令
-                                                              //   return;
-        id = (uint8_t)((data->ui8[1]) * 10 + (data->ui8[0])); // data的前两位储存id
+    if ((uint8_t)data->payload.ui8[2] == 1)                                   // D2为弹起标志位，按下为1|按键按下时才解析指令
+                                                                              //   return;
+        id = (uint8_t)((data->payload.ui8[1]) * 10 + (data->payload.ui8[0])); // data的前两位储存id
     else
         return;
     switch (id)
@@ -65,6 +65,7 @@ void Handle_Button(CANMsg *data)
         break;
     case 6:                                                                      // 切换控制模式
         RudderChassis.base->ctrl_mode = (RudderChassis.base->ctrl_mode + 1) % 4; // 不进入调试模式
+        RudderChassis.base->handbrake_flag = 0;
         switch (RudderChassis.base->ctrl_mode)
         {
         case 0:
@@ -137,6 +138,20 @@ void Handle_Button(CANMsg *data)
     case 23:
         break;
 
+    /*30系指令用于跑点参数控制*/
+    case 30:
+        uprintf("--Handle|x:%5.3f y:%5.3f yaw:%5.3f\r\n",
+                BaseChassis.PostureStatus.x,
+                BaseChassis.PostureStatus.y,
+                BaseChassis.PostureStatus.yaw);
+        break;
+    case 31:
+        break;
+    case 32:
+        break;
+    case 33:
+        break;
+
     default:
         break;
     }
@@ -148,20 +163,17 @@ uint8_t Handle_CANRxOK = 0;
  *        左摇杆的深浅控制速度，方向控制偏航角
  * @param data 手柄摇杆的数据使用int16,can可以一次发送4个
  **/
-void Handle_Rocker(CANMsg *data)
+void CAN_Callback_Handle_Rocker(CAN_ConnMessage_t *data)
 {
-    Handle.left_rocker.x = (int)data->i16[3];
-    Handle.left_rocker.y = (int)data->i16[2];
-    Handle.right_rocker.x = (int)data->i16[1];
-    Handle.right_rocker.y = (int)data->i16[0];
+    Handle.left_rocker.x = (int)data->payload.i16[3];
+    Handle.left_rocker.y = (int)data->payload.i16[2];
+    Handle.right_rocker.x = (int)data->payload.i16[1];
+    Handle.right_rocker.y = (int)data->payload.i16[0];
     Handle_CANRxOK = 1;
 }
 
-static float RROCKER_ZERO_OFFSET = 0.314; // ±10°内无值，从而让手指可以一直顶着摇杆，避免误操作
-static float target_speed_ar[5] = {0};    // 驱动电机历史速度，用以滤波
-static int target_speed_ar_index = 0;     // 数组的指针
 /**
- * @brief 手柄执行函数,左摇杆控制速度矢量，深度控制速度大小；右摇杆控制偏航角，与y轴的偏差角度大小控制角速度
+ * @brief 手柄执行函数,左摇杆控制油门和偏航角；右摇杆控制全场速度
  **/
 void Handle_Exe()
 {
@@ -201,11 +213,11 @@ void Handle_Exe()
     {
         if (Handle.left_rocker.x > 0)
         {
-            RudderChassis.base->target_omega = -(Handle.left_rocker.x - 20) * 1.0 / 50;
+            RudderChassis.base->target_omega = -(Handle.left_rocker.x - 20) * 1.0 / 80;
         }
         else
         {
-            RudderChassis.base->target_omega = -(Handle.left_rocker.x + 20) * 1.0 / 50;
+            RudderChassis.base->target_omega = -(Handle.left_rocker.x + 20) * 1.0 / 80;
         }
     }
     Handle_CANRxOK = 0;

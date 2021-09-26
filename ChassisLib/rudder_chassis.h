@@ -1,14 +1,13 @@
 #ifndef RUDDER_CHASSIS_H_
 #define RUDDER_CHASSIS_H_
 
-#include "chassis_common.h"
+#include "base_chassis.h"
 #include "common_config.h"
-#ifdef USE_RUDDER_CHASSIS
+#ifdef USE_CHASSIS_RUDDER
 
 #include "steer_wheel.h"
 #include "common_config.h"
 #include "handle.h"
-#include "chassis_utils.h"
 #include "main.h"
 #include "vec.h"
 #include "point.h"

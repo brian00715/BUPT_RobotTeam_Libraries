@@ -17,12 +17,15 @@
   *
   ******************************************************************************
   */
+#include "vesc_can.h"
+#include "motor_driver.h"
+#ifdef USE_MTR_DRIVER_VESC
 
 /* Includes ---------------------------------------------------*/
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
-#include "vesc_can.h"
+
 #include "can_utils.h"
 #include "main.h"
 
@@ -168,7 +171,7 @@ void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len)
     }
 
 #if VESC_CAN_ENABLE
-    CAN_SendExtMsg(id, (CANMsg *)data); //须改为自己的can发送函数，拓展帧
+    CAN_SendExtMsg(id, (CAN_Message_u *)data); //须改为自己的can发送函数，拓展帧
 #else
     (void)id;
     (void)data;
@@ -184,7 +187,7 @@ void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len)
     }
 
 #if VESC_CAN_ENABLE
-    CAN_SendMsg((uint16_t)id, (CANMsg *)data); //须改为自己的can发送函数，标准帧
+    CAN_SendStdMsg((uint16_t)id, (CAN_Message_u *)data); //须改为自己的can发送函数，标准帧
 #else
     (void)id;
     (void)data;
@@ -192,6 +195,12 @@ void comm_can_transmit_sid(uint32_t id, uint8_t *data, uint8_t len)
 #endif
 }
 
+/**
+ * @brief 设置驱动器目标占空比 
+ * 
+ * @param controller_id 
+ * @param duty 0.24=24%
+ */
 void comm_can_set_duty(uint8_t controller_id, float duty)
 {
     int32_t send_index = 0;
@@ -630,7 +639,7 @@ void comm_can_conf_current_limits_in(uint8_t controller_id,
 //    if (rxmsg.IDE == CAN_IDE_EXT)
 //    {
 //        uint8_t id = rxmsg.EID & 0xFF;
-//        CAN_PACKET_ID cmd = rxmsg.EID >> 8;
+//        VESC_CAN_PACKET_ID cmd = rxmsg.EID >> 8;
 //        if (id == 255 || id == controller_id)
 //        {
 //            switch (cmd)
@@ -666,7 +675,7 @@ void comm_can_conf_current_limits_in(uint8_t controller_id,
 //                break;
 //
 //            case CAN_PACKET_FILL_RX_BUFFER:
-//                memcpy(rx_buffer + rxmsg.data8[0], rxmsg.data8 + 1, rxmsg.DLC - 1);
+//                memcpy(CAN_RxBuffer + rxmsg.data8[0], rxmsg.data8 + 1, rxmsg.DLC - 1);
 //                break;
 //
 //            case CAN_PACKET_FILL_RX_BUFFER_LONG:
@@ -674,7 +683,7 @@ void comm_can_conf_current_limits_in(uint8_t controller_id,
 //                rxbuf_ind |= rxmsg.data8[1];
 //                if (rxbuf_ind < RX_BUFFER_SIZE)
 //                {
-//                    memcpy(rx_buffer + rxbuf_ind, rxmsg.data8 + 2, rxmsg.DLC - 2);
+//                    memcpy(CAN_RxBuffer + rxbuf_ind, rxmsg.data8 + 2, rxmsg.DLC - 2);
 //                }
 //                break;
 //
@@ -692,18 +701,18 @@ void comm_can_conf_current_limits_in(uint8_t controller_id,
 //                crc_high = rxmsg.data8[ind++];
 //                crc_low = rxmsg.data8[ind++];
 //
-//                if (crc16(rx_buffer, rxbuf_len) == ((unsigned short)crc_high << 8 | (unsigned short)crc_low))
+//                if (crc16(CAN_RxBuffer, rxbuf_len) == ((unsigned short)crc_high << 8 | (unsigned short)crc_low))
 //                {
 //                    switch (commands_send)
 //                    {
 //                    case 0:
-//                        commands_process_packet(rx_buffer, rxbuf_len, send_packet_wrapper);
+//                        commands_process_packet(CAN_RxBuffer, rxbuf_len, send_packet_wrapper);
 //                        break;
 //                    case 1:
-//                        commands_send_packet(rx_buffer, rxbuf_len);
+//                        commands_send_packet(CAN_RxBuffer, rxbuf_len);
 //                        break;
 //                    case 2:
-//                        commands_process_packet(rx_buffer, rxbuf_len, 0);
+//                        commands_process_packet(CAN_RxBuffer, rxbuf_len, 0);
 //                        break;
 //                    default:
 //                        break;
@@ -977,3 +986,5 @@ void comm_can_conf_current_limits_in(uint8_t controller_id,
 //    }
 //#endif
 //}
+
+#endif

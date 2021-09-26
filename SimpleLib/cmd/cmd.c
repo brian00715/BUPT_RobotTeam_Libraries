@@ -13,14 +13,14 @@
 #include <stdlib.h>
 #include "cmd.h"
 #include "hash.h"
-#include "chassis_common.h"
+#include "base_chassis.h"
 
 /* 变量定义 -----------------------------------------------------*/
 static const char *delim = ", \r\n\0";
 static HashTable cmd_table;
 
 UART_HandleTypeDef CMD_UART;
-#define Location_UART (huart5) // action全场定位接口
+#define Location_UART (huart6) // action全场定位接口
 char *cmd_argv[MAX_ARGC];
 uint8_t DMAaRxBuffer[DMA_BUFFER_SIZE];
 char DMAUSART_RX_BUF[DMA_BUFFER_SIZE];
@@ -36,7 +36,7 @@ static union
 int DMA_RxOK_Flag_vega = 0;    //vega接收buffer
 char DMAUSART_RX_BUF_vega[99]; //全场定位接收buffer
 uint8_t DMAaRxBuffer_vega[99]; //全场定位接收buffer
-void usart_exc_DMA_vega();     //全场定位：将读到的数据存入（结合IDLE中断使用）
+void USART_DMA_Exe_Location(); //全场定位：将读到的数据存入（结合IDLE中断使用）
 /* private function -----------------------------------------------------*/
 static int str_cmp(const void *a, const void *b);
 static void _cmd_help(const void *key, void **value, void *c1);
@@ -63,12 +63,12 @@ void cmd_init(void)
 {
     if (cmd_table == NULL)
     {
-        cmd_table = HashTable_create(str_cmp, hashStr, NULL);
+        cmd_table = HashTable_Create(str_cmp, HashStr, NULL);
     }
     cmd_add("help", "show cmd usage", cmd_help_func);
 }
 
-void usart_exc_DMA()
+void USART_DMA_Exe()
 {
     int cmd_argc;
     int erro_n;
@@ -118,7 +118,7 @@ void HAL_UART_IDLECallback(UART_HandleTypeDef *huart)
         if (DMAUSART_RX_BUF_vega[0] != '\0')
             DMA_RxOK_Flag_vega = 1;
 
-        usart_exc_DMA_vega();                                                    // 将全场定位通过串口发送的消息存入
+        USART_DMA_Exe_Location();                                                // 将全场定位通过串口发送的消息存入
         memset(DMAaRxBuffer_vega, 0, 98);                                        // 缓存数组清零
         HAL_UART_Receive_DMA(&Location_UART, (uint8_t *)&DMAaRxBuffer_vega, 99); //开启DMA串口中断
     }
@@ -154,7 +154,7 @@ int cmd_parse(char *cmd_line, int *argc, char *argv[])
  */
 int cmd_exec(int argc, char *argv[])
 {
-    struct cmd_info *cmd = (struct cmd_info *)HashTable_get(cmd_table, argv[0]);
+    struct cmd_info *cmd = (struct cmd_info *)HashTable_GetValue(cmd_table, argv[0]);
     if (cmd != NULL)
     {
         cmd->cmd_func(argc, argv);
@@ -174,7 +174,7 @@ void cmd_help_func(int argc, char *argv[])
     // FIXME: ZeroVoid	2019/09/23	 dma usage 输出不完整，调试输出没问题
     uprintf("===============================help===============================\r\n");
     uprintf("|              CMD              |           Description          |\r\n");
-    HashTable_map(cmd_table, _cmd_help, NULL); // 遍历哈希表，打印所有帮助指令
+    HashTable_Map(cmd_table, _cmd_help, NULL); // 遍历哈希表，打印所有帮助指令
     uprintf("==================================================================\r\n");
 }
 
@@ -195,7 +195,7 @@ void cmd_add(char *cmd_name, char *cmd_usage, void (*cmd_func)(int argc, char *a
     strcpy(usage, cmd_usage);
     new_cmd->cmd_func = cmd_func;
     new_cmd->cmd_usage = usage;
-    HashTable_insert(cmd_table, name, new_cmd);
+    HashTable_Insert(cmd_table, name, new_cmd);
 }
 
 char print_buffer[PRINT_BUFFER_SIZE];
@@ -276,7 +276,7 @@ static void _cmd_help(const void *key, void **value, void *c1)
  * @param void
  * @return void 注：直接将结果写入了底盘结构体中
  */
-void usart_exc_DMA_vega()
+void USART_DMA_Exe_Location()
 {
     if (DMA_RxOK_Flag_vega)
     {
@@ -302,7 +302,7 @@ void usart_exc_DMA_vega()
                     float x = VegaData_t.ActVal[3] / 1000;
                     float y = VegaData_t.ActVal[4] / 1000;
                     float yaw = VegaData_t.ActVal[0];
-                    float temp_yaw = ANGLE2RAD(yaw + 90);
+                    float temp_yaw = __ANGLE2RAD(yaw + 90);
                     if (temp_yaw < 0)
                     {
                         temp_yaw += 2 * PI;
@@ -311,7 +311,7 @@ void usart_exc_DMA_vega()
                     BaseChassis.PostureStatus.x = -x;
                     BaseChassis.PostureStatus.y = -y;
                     Chassis_UpdatePostureStatus();
-                    
+
                     DMA_RxOK_Flag_vega = 0;
                     memset(DMAUSART_RX_BUF_vega, 0, 98);
                     return;

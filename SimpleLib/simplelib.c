@@ -47,15 +47,15 @@ void simplelib_run(void)
 #ifdef SL_CMD
     if (DMA_RxOK_Flag)
     {
-        usart_exc_DMA();
+        USART_DMA_Exe();
         DMA_RxOK_Flag = 0;
     }
 #endif // SL_CMD
 #ifdef SL_CAN
-    if (can_exc_callback_flag)
+    if (CAN_ExeCallback_Flag)
     {
         CAN_CallbackExe();
-        can_exc_callback_flag = 0;
+        CAN_ExeCallback_Flag = 0;
     }
 #endif // SL_CAN
     if (send_wave_flag)

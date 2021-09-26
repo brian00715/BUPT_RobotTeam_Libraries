@@ -52,7 +52,7 @@ extern "C"
     };
 
     void usart_DMA_init();
-    void usart_exc_DMA();
+    void USART_DMA_Exe();
     void HAL_UART_IDLECallback(UART_HandleTypeDef *huart);
 
     int cmd_parse(char *cmd_line, int *argc, char *argv[]);

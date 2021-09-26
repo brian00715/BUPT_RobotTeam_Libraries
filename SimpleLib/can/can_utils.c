@@ -2,13 +2,18 @@
  * Copyright:		BUPT
  * File Name:		can_utils.c
  * Description:		CAN 工具函数
- * Author:			ZeroVoid
- * Version:			0.2.1
- * Data:			2019/09/23 Mon 13:59
+ * Author:			ZeroVoid & simon
+ * Version:			0.3.0
+ * Data:			2021-07-05 15:11:34
  *******************************************************************************/
+
 // TODO: ZeroVoid	due:9/26	错误处理
 // TODO: ZeroVoid	due:10/2	动态配置
 // TODO: ZeroVoid	due:10/7	优化多中断管理
+
+/**
+ * @v0.3.0 将CAN回调函数的通信数据结构改为CAN_ConnMessage_t，使回调函数能够知道DLC RTR等字段
+ */
 
 #include "can_utils.h"
 #ifdef SL_CAN
@@ -20,35 +25,31 @@
 #include <stdlib.h>
 #include "motor_driver.h"
 
+/* 全局变量----------------------------------------------------*/
 CAN_HandleTypeDef HCAN;
 
-int can_rx_callback_flag = 0;
-CAN_TxHeaderTypeDef TxHeader;
-CAN_TxHeaderTypeDef ExtTxHeader;
-CAN_RxHeaderTypeDef RxHeader;
+static CAN_ConnMessage_t CAN_RxBuffer = {0}; // CAN接收缓冲
+CAN_Message_u CAN_TxData;                    // CAN要发送的数据
 uint32_t TxMailbox;
-CANMsg can_rx_data;
-CANMsg can_tx_data;
-uint32_t std_id[] = {230, 324, 325, 0x201, 89, 1, 0x281, 0x282};
-// 0x281返回elmo为1的大疆电机的信息，0x282返回四个电机的位置信息
-// uint32_t ext_id[] = {0x963};  // 0x963是本杰明电调的状态包ID，第四位是转速
+CAN_TxHeaderTypeDef CAN_TxHeader;
+CAN_TxHeaderTypeDef CAN_ExtTxHeader;
+CAN_RxHeaderTypeDef CAN_RxHeader;
+int CAN_RxCallback_Flag = 0;
 
-static CANMsg rx_buffer = {0};
-static uint32_t rx_id = 0;
-
+/* 局部函数----------------------------------------------------*/
 static void CAN_Config(CAN_HandleTypeDef *hcan);
-static HashTable can_callback_table = NULL;
-
+static HashTable CAN_CallbackTable = NULL; // CAN回调函数哈希表
 static unsigned int hash_id(const void *id);
-static int id_cmp(const void *, const void *);
+static int CAN_IDCmp(const void *, const void *);
 
 void CAN_Init(CAN_HandleTypeDef *hcan)
 {
     HCAN = *hcan;
     CAN_Config(&HCAN);
-    if (can_callback_table == NULL)
+    // HAL_CAN_ActivateNotification(&hcan1, CAN_IT_TX_MAILBOX_EMPTY); //开启发送邮箱空中断
+    if (CAN_CallbackTable == NULL)
     {
-        can_callback_table = HashTable_create(id_cmp, hash_id, NULL);
+        CAN_CallbackTable = HashTable_Create(CAN_IDCmp, hash_id, NULL);
     }
     CAN_FuncInit();
 }
@@ -59,32 +60,32 @@ void CAN_Init(CAN_HandleTypeDef *hcan)
  * @param   callback    回调函数指针 data: can接收到数据联合体
  * @return	None
  */
-void CAN_CallbackAdd(const uint32_t id, void (*callback)(CANMsg *data))
+void CAN_CallbackAdd(const uint32_t id, void (*callback)(CAN_ConnMessage_t *data))
 {
     uint32_t *can_id = (uint32_t *)malloc(sizeof(uint32_t));
     *can_id = id;
-    HashTable_insert(can_callback_table, can_id, (void *)callback);
+    HashTable_Insert(CAN_CallbackTable, can_id, (void *)callback);
 }
 
 /**
- * @brief 所有can消息解析函数的执行体
+ * @brief 根据CAN ID取回回调函数指针并执行
  */
 void CAN_CallbackExe(void)
 {
-    void (*callback_func)(CANMsg *) = (void (*)(CANMsg *))HashTable_get(can_callback_table, &rx_id);
+    void (*callback_func)(CAN_ConnMessage_t *) = (void (*)(CAN_ConnMessage_t *))HashTable_GetValue(CAN_CallbackTable, &CAN_RxBuffer.id); // 根据CAN ID取回回调函数
     if (callback_func)
     {
-        callback_func(&rx_buffer); // 执行CAN消息解析函数
+        callback_func(&CAN_RxBuffer); // 执行回调函数
     }
-    if (can_rx_callback_flag)
+    if (CAN_RxCallback_Flag)
     {
 #ifdef SL_NRF_COMM
-        if (nrf_all_can_send || rx_id == NRF_CAN_SID)
+        if (nrf_all_can_send || CAN_RxID == NRF_CAN_SID)
         {
-            _can_rx_nrf_callback(&rx_id, &rx_buffer);
+            _can_rx_nrf_callback(&CAN_RxID, &rx_buffer);
         }
 #endif // SL_NRF_COMM
-        CAN_RxCallback(&rx_buffer);
+        CAN_RxCallback(&CAN_RxBuffer);
     }
 }
 
@@ -93,23 +94,21 @@ void CAN_CallbackExe(void)
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 {
-    HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &RxHeader, can_rx_data.ui8); // RxHeader属于临时变量
-    rx_id = (RxHeader.IDE == CAN_ID_STD) ? RxHeader.StdId : RxHeader.ExtId;
-    rx_buffer.df = can_rx_data.df; // copyt can_rx_data to rx_buffer
-    if (rx_id == 89)               // 89是本杰明电调反馈状态包的id
-    {
-        VESC_RxHandler(&can_rx_data);
-    }
-    can_exc_callback_flag = 1;
+    HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &CAN_RxHeader, CAN_RxBuffer.payload.ui8);
+    CAN_RxBuffer.id = (CAN_RxHeader.IDE == CAN_ID_STD) ? CAN_RxHeader.StdId : CAN_RxHeader.ExtId;
+    CAN_RxBuffer.len = CAN_RxHeader.DLC;
+    CAN_RxBuffer.rtr = CAN_RxHeader.RTR;
+    CAN_ExeCallback_Flag = 1;
+    HAL_CAN_ActivateNotification(hcan, CAN_IT_RX_FIFO0_MSG_PENDING); // 再次使能FIFO0接收中断
 }
 
-void can_send_test(void)
+void CAN_SendTest(void)
 {
-    can_tx_data.in[0] = 0x1;
-    can_tx_data.in[1] = 0xAD;
-    TxHeader.StdId = 1;
+    CAN_TxData.in[0] = 0x1;
+    CAN_TxData.in[1] = 0xAD;
+    CAN_TxHeader.StdId = 1;
     uprintf("send data\r\n");
-    HAL_CAN_AddTxMessage(&HCAN, &TxHeader, can_tx_data.ui8, &TxMailbox);
+    HAL_CAN_AddTxMessage(&HCAN, &CAN_TxHeader, CAN_TxData.ui8, &TxMailbox);
 }
 
 /** 
@@ -119,51 +118,56 @@ void can_send_test(void)
  * @param len 数据长度
  * @return	0 正常发送
  *          1: 发送失败
+ * @todo 无法决定RTR模式,因和其他代码耦合度太高，后续再修改
  **/
-int CAN_SendMsg(uint16_t std_id, CANMsg *msg)
+int CAN_SendStdMsg(uint16_t std_id, CAN_Message_u *msg)
 {
-    TxHeader.StdId = std_id;
-    TxHeader.IDE = CAN_ID_STD;
-#ifdef DEBUG
-    uprintf("%d %d %d\r\n", std_id, msg->in[0], msg->in[1]);
-#endif                                                            //DEBUG
-    HAL_CAN_AddTxMessage(&HCAN, &TxHeader, msg->ui8, &TxMailbox); // 发送常规的uint8类型数据
-    //   if (HAL_CAN_AddTxMessage(&HCAN, &TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
-    //   {
-    //     uprintf("Error: CAN can't send msg.\r\n");
-    //     return 1;
-    //   }
-    uint32_t timecnt = 0;
-    uint32_t can_tsr = 0;
-    for (;;)
+    CAN_TxHeader.StdId = std_id;
+    CAN_TxHeader.IDE = CAN_ID_STD;
+    CAN_TxHeader.RTR = CAN_RTR_DATA;
+    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0) // 等待发送邮箱空
+        HAL_Delay(1);
+    if (HAL_CAN_AddTxMessage(&HCAN, &CAN_TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
     {
-        timecnt++;
-        if (timecnt > 60000)
-        {
-            can_tsr = READ_REG(HCAN.Instance->TSR);
-            if (can_tsr & 0x00020202)
-            {
-                return 0;
-            }
-            else
-            {
-                // uprintf("Error: CAN can't send msg.\r\n");
-                return 1;
-            }
-        }
-    };
-    // return 0;
+        uprintf("Error: CAN can't send msg.\r\n");
+        return 1;
+    }
+
+    // HAL_CAN_AddTxMessage(&HCAN, &TxHeader, msg->ui8, &TxMailbox); // 发送常规的uint8类型数据
+    // uint32_t timecnt = 0;
+    // uint32_t can_tsr = 0;
+    // for (;;)
+    // {
+    //     timecnt++;
+    //     if (timecnt > 60000)
+    //     {
+    //         can_tsr = READ_REG(HCAN.Instance->TSR);
+    //         if (can_tsr & 0x00020202)
+    //         {
+    //             return 0;
+    //         }
+    //         else
+    //         {
+    //             uprintf("Error: CAN can't send msg.\r\n");
+    //             return 1;
+    //         }
+    //     }
+    //  };
+    return 0;
 }
 
 /**
  * @brief	can ext id send
  * @return	0: send ok; 1: send error;
  */
-int CAN_SendExtMsg(uint32_t id, CANMsg *msg)
+int CAN_SendExtMsg(uint32_t ext_id, CAN_Message_u *msg)
 {
-    TxHeader.ExtId = id;
-    TxHeader.IDE = CAN_ID_EXT;
-    if (HAL_CAN_AddTxMessage(&HCAN, &TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
+    CAN_TxHeader.ExtId = ext_id;
+    CAN_TxHeader.IDE = CAN_ID_EXT;
+    CAN_TxHeader.RTR = CAN_RTR_DATA;
+    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0) // 等待发送邮箱空
+        HAL_Delay(1);
+    if (HAL_CAN_AddTxMessage(&HCAN, &CAN_TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
     {
         return 1;
     }
@@ -175,13 +179,13 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     return;
 }
 
-__weak void CAN_RxCallback(CANMsg *data) {}
+__weak void CAN_RxCallback(CAN_ConnMessage_t *data) {}
 
 void CAN_Config(CAN_HandleTypeDef *hcan)
 {
 
     // FIXME: ZeroVoid	2019/11/13	 len 无法为零, 从而不过滤CAN
-    can_std_mask_filter_conf(hcan, std_id, sizeof(std_id) / sizeof(std_id[0]), 0);
+    CAN_StdMaskFilterConf(hcan, CAN_AcceptID_Std, sizeof(CAN_AcceptID_Std) / sizeof(CAN_AcceptID_Std[0]), 0);
 
     //can_std_list_filter_conf(hcan, 325, 0);
 
@@ -206,13 +210,13 @@ void CAN_Config(CAN_HandleTypeDef *hcan)
     }
 
     /* Configure Transmission provess */
-    TxHeader.RTR = CAN_RTR_DATA;
-    TxHeader.IDE = CAN_ID_STD;
-    TxHeader.DLC = 8;
-    TxHeader.TransmitGlobalTime = DISABLE;
+    CAN_TxHeader.RTR = CAN_RTR_DATA;
+    CAN_TxHeader.IDE = CAN_ID_STD;
+    CAN_TxHeader.DLC = 8;
+    CAN_TxHeader.TransmitGlobalTime = DISABLE;
 }
 
-void can_std_mask_filter_conf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_t len, uint32_t bank_num)
+void CAN_StdMaskFilterConf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_t len, uint32_t bank_num)
 {
     CAN_FilterTypeDef sFilterConfig;
     uint16_t mask, tmp, i;
@@ -261,7 +265,7 @@ void can_std_mask_filter_conf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_
     }
 }
 
-void can_std_list_filter_conf(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t bank_num)
+void CAN_StdListFilterConf(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t bank_num)
 {
     CAN_FilterTypeDef sFilterConfig;
 
@@ -288,7 +292,7 @@ static unsigned int hash_id(const void *id)
     return *((unsigned int *)id);
 }
 
-static int id_cmp(const void *a, const void *b)
+static int CAN_IDCmp(const void *a, const void *b)
 {
     return (*((unsigned int *)a) == *((unsigned int *)b)) ? 0 : 1;
 }

@@ -8,7 +8,8 @@ Data:           2019/12/9
 *******************************************************************************/
 #include "laser.h"
 #include "cmd.h"
-#include "chassis_common.h"
+#include "base_chassis.h"
+#ifdef USE_LASER
 //TODO :区分三个激光分别对应adc的第几个通道
 
 #define ERROR_ON_LEFT 0 //三个激光与实际的偏差
@@ -179,3 +180,5 @@ void Laser_PrintADCValue()
   uprintf("\r\n");
   // uprintf("--adc1 value: %d \r\n", HAL_ADC_GetValue(&hadc1));
 }
+
+#endif // USE_LASER
