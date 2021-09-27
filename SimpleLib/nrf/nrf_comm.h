@@ -14,7 +14,7 @@
 extern "C" {
 #endif
 #include "simplelib_cfg.h"
-#ifdef SL_NRF_COMM
+#ifdef SLIB_USE_NRF_COMM
 #include "nrf24l01.h"
 #include "can_utils.h"
 
@@ -64,7 +64,7 @@ void nrf_receive_callback(uint8_t *data, int len);
 void nrf_send_callback(uint8_t *data, int len);
 void nrf_max_rt_callback(uint8_t *data, int len);
 
-#endif // SL_NRF_COMM
+#endif // SLIB_USE_NRF_COMM
 #ifdef __cplusplus
 }
 #endif

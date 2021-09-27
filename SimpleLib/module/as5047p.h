@@ -4,7 +4,7 @@
  extern "C" {
 #endif
 #include "simplelib_cfg.h"
-#ifdef SL_AS5047P
+#ifdef SLIB_USE_AS5047P
 
 #include  "stdint.h" 
 
@@ -41,7 +41,7 @@ extern Wheel wheel_x;
 extern Wheel wheel_y;
 extern float diameter_x;
 extern float diameter_y;
-#endif // SL_AS5047P
+#endif // SLIB_USE_AS5047P
    
 #ifdef __cplusplus
 }

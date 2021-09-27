@@ -1,15 +1,15 @@
 #include "stmflash.h"
-#ifdef SL_FLASH
+#ifdef SLIB_USE_FLASH
 
 #include "math.h"
 #include <string.h>
-#ifdef SL_CMD
+#ifdef SLIB_USE_CMD
 #include "cmd.h"
-#endif // SL_CMD
+#endif // SLIB_USE_CMD
 
-#ifdef SL_NRF
+#ifdef SLIB_USE_NRF
 #include "nrf24l01.h"
-#endif // SL_NRF
+#endif // SLIB_USE_NRF
 
 //////////////////////////////////////////////////////////////////////////////////
 //本程序只供学习使用，未经作者许可，不得用于其它任何用途
@@ -42,9 +42,9 @@ void write_prams()
 
 	if (HAL_FLASHEx_Erase(&erase_init, &error) != HAL_OK)
 	{
-#ifdef SL_CMD
+#ifdef SLIB_USE_CMD
 		uprintf("[ERROR] flash data.\r\n");
-#endif // SL_CMD
+#endif // SLIB_USE_CMD
 		return;
 	}
 
@@ -56,9 +56,9 @@ void write_prams()
 						  FLASH_SAVE_ADDR + i * 4, temp);
 	}
 	HAL_FLASH_Unlock();
-#ifdef SL_CMD
+#ifdef SLIB_USE_CMD
 	uprintf("[INFO] flash: write ok.\r\n");
-#endif // SL_CMD
+#endif // SLIB_USE_CMD
 }
 
 void load_prams()
@@ -66,12 +66,12 @@ void load_prams()
 	for (int i = 0; i < FLASH_SIZE; i++)
 	{
 		flash_data[i] = *((float *)(FLASH_SAVE_ADDR + i * 4));
-#ifdef SL_CMD
+#ifdef SLIB_USE_CMD
 		uprintf("[INFO] data[%2d]: %.6f\r\n", i, flash_data[i]);
-#endif // SL_CMD
+#endif // SLIB_USE_CMD
 	}
 
-#ifdef SL_NRF
+#ifdef SLIB_USE_NRF
 	// TODO: ZeroVoid	太过丑陋的代码, 非常需要改进
 	memcpy(nrf_tx_addr, flash_data, 5);						  // tx 发送地址
 	memcpy(nrf_rx_addr, ((uint8_t *)flash_data) + 5, 5);	  // rx pipe 0 地址
@@ -82,7 +82,7 @@ void load_prams()
 		memcpy(nrf_rx_addr[i], ((uint8_t *)flash_data) + 19 + i, 1);
 	}
 	memcpy(&nrf_handle.nrf_addr_len, ((uint8_t *)flash_data) + NRF_ADDR_LEN_OFFSET, 1);
-#endif // SL_NRF
+#endif // SLIB_USE_NRF
 }
 
 #endif // STM32F072xB
@@ -249,4 +249,4 @@ void Test_Write(u32 WriteAddr, u32 WriteData)
 }
 #endif // STM32F407xx
 
-#endif // SL_FLASH
+#endif // SLIB_USE_FLASH

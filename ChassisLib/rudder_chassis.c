@@ -17,8 +17,8 @@
 //========================================public========================================
 RudderChassis_t RudderChassis; // 底盘全局结构体
 
-extern PID_t NormalCorrPID_x, NormalCorrPID_y; //法向修正向量PD控制
-extern PID_t YawPID;                           //偏航角控制，ω=f(Δθ)
+extern PID_s NormalCorrPID_x, NormalCorrPID_y; //法向修正向量PD控制
+extern PID_s YawPID;                           //偏航角控制，ω=f(Δθ)
 //==========================================END=============================================
 
 /**

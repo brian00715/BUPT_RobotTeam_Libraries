@@ -465,7 +465,7 @@ void ReadActualCur(CAN_TypeDef *CANx, uint8_t ElmoNum)
     CAN_SendStdMsg(StdId, &msg);
 }
 
-void CAN_Callback_DJI_ReadInfo(CAN_ConnMessage_t *data)
+void CAN_Callback_DJI_ReadInfo(CAN_ConnMessage_s *data)
 {
     int id = (data->payload.in[0]) >> 16;
     int index = ((data->payload.in[0]) << 16) >> 16;
@@ -493,7 +493,7 @@ void CAN_Callback_DJI_ReadInfo(CAN_ConnMessage_t *data)
     }
 }
 
-void CAN_Callback_DJI_ReadAllPosInfo(CAN_ConnMessage_t *data)
+void CAN_Callback_DJI_ReadAllPosInfo(CAN_ConnMessage_s *data)
 {
     // uprintf("--Received DJI CAN Msg\r\n");
     // 直接得到的是电机输出轴的位置（已经除过819.2了）

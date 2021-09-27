@@ -10,7 +10,7 @@ typedef struct OmniChassis_t
 {
     BaseChassis_t *base; // 该结构体一直存在，子类只需关联其指针
     // VESCDriver_t drive_motors[4];
-    MotorDriver_t drive_motors[4];
+    MotorDriver_s drive_motors[4];
     char motor_can_flag; // 在定时中断中置1，控制can消息发送频率
 } OmniChassis_t;
 

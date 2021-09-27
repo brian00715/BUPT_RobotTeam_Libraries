@@ -5,15 +5,12 @@ extern "C"
 {
 #endif
 
-#include "can_utils.h"
-#include "../ChassisLib/handle.h"
-#ifdef SL_CAN
+#ifdef SLIB_USE_CAN
 
     void CAN_FuncInit();
-
     extern uint32_t CAN_AcceptID_Std[8];
 
-#endif // SL_CAN
+#endif // SLIB_USE_CAN
 #ifdef __cplusplus
 }
 #endif

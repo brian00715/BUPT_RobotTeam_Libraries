@@ -79,9 +79,9 @@ extern BaseChassis_t BaseChassis;
 
 void Chassis_RemappingPathSetsSpeed(PlanPoint point_sets[], int point_num, double k, double b,
                                     float min_speed, float max_speed);
-void Chassis_Go2Point(Point2D target, float target_yaw);
+void Chassis_Go2Point(Point2D_s target, float target_yaw);
 void Chassis_TrackPoints(int index);
-float Chassis_Plan2PointSpeed(Point2D start, Point2D target,
+float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
                               float start_speed, float final_speed,
                               float acc_ratio, float dec_ratio);
 void Chassis_TrackVector(vec now_speed_vec, vec target_speed_vec, vec now_pos2next_target, vec distance_vec, float target_yaw);
@@ -96,9 +96,9 @@ void Chassis_TrackStatusInit();
 void Chassis_UpdatePostureStatus();
 void Chassis_YawTuning(float target_yaw);
 void Chassis_MotionCtrl(void);
-void CAN_Callback_Location_ReadPos_X(CAN_ConnMessage_t *data);
-void CAN_Callback_Location_ReadPos_Y(CAN_ConnMessage_t *data);
-void CAN_Callback_Location_ReadPos_Yaw(CAN_ConnMessage_t *data);
+void CAN_Callback_Locator_ReadPos_X(CAN_ConnMessage_s *data);
+void CAN_Callback_Locator_ReadPos_Y(CAN_ConnMessage_s *data);
+void CAN_Callback_Locator_ReadPos_Yaw(CAN_ConnMessage_s *data);
 
 extern BaseChassis_t BaseChassis;
 extern float CMD_TargetSpeed;
@@ -106,7 +106,7 @@ extern float CMD_TargetDir;
 extern float CMD_TargetOmega;
 extern float CMD_TargetYaw;
 extern char YawTuning_Start;
-extern Point2D CMD_Chassis_TargetPoint;
+extern Point2D_s CMD_Chassis_TargetPoint;
 extern float CMD_Chassis_TargetYaw;
 
 #endif

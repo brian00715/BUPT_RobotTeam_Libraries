@@ -29,12 +29,12 @@ float CMD_TargetYaw = 0;
 char YawTuning_Start;
 
 /* PID结构体,请根据所使用的底盘实际调试-----------------------------*/
-PID_t NormalCorrPID_x = {0}; //
-PID_t NormalCorrPID_y = {0};
-PID_t Chassis_SpeedCtrlPID = {0};
-PID_t Chassis_OmegaCtrlPID = {0};
-PID_t YawPID = {0};
-PID_t LockPID = {0}; // 跑点模式
+PID_s NormalCorrPID_x = {0}; //
+PID_s NormalCorrPID_y = {0};
+PID_s Chassis_SpeedCtrlPID = {0};
+PID_s Chassis_OmegaCtrlPID = {0};
+PID_s YawPID = {0};
+PID_s LockPID = {0}; // 跑点模式
 
 static float location_raw_x, location_raw_y,
     location_raw_speed_x, location_raw_speed_y;
@@ -178,7 +178,7 @@ void Chassis_MotionCtrl(void)
     }
 }
 
-Point2D CMD_Chassis_TargetPoint = {0};
+Point2D_s CMD_Chassis_TargetPoint = {0};
 float CMD_Chassis_TargetYaw = 0;
 /**
  * @brief 跑点集,使用跑单个点的方法
@@ -218,14 +218,14 @@ void Chassis_TrackPoints(int index)
     }
 }
 
-void Chassis_Go2Point(Point2D target, float target_yaw)
+void Chassis_Go2Point(Point2D_s target, float target_yaw)
 {
     if (BaseChassis.fChassisMove == NULL)
     {
         uprintf("## Error! fChassisMove is NULL ##\r\n");
         return;
     }
-    static Point2D start;
+    static Point2D_s start;
     if (BaseChassis.TrackStatus.go2point_start == 1) // 保存起点
     {
         start.x = BaseChassis.PostureStatus.x;
@@ -301,7 +301,7 @@ void Chassis_Go2Point(Point2D target, float target_yaw)
  * 
  * @return 当前期望速度
  */
-float Chassis_Plan2PointSpeed(Point2D start, Point2D target,
+float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
                               float start_speed, float final_speed,
                               float acc_ratio, float dec_ratio)
 {
@@ -607,19 +607,19 @@ void Chassis_YawTuning(float target_yaw)
     }
 }
 
-void CAN_Callback_Location_ReadPos_X(CAN_ConnMessage_t *data)
+void CAN_Callback_Locator_ReadPos_X(CAN_ConnMessage_s *data)
 {
     location_raw_x = data->payload.fl[1];
     location_raw_speed_x = data->payload.fl[0];
 }
 
-void CAN_Callback_Location_ReadPos_Y(CAN_ConnMessage_t *data)
+void CAN_Callback_Locator_ReadPos_Y(CAN_ConnMessage_s *data)
 {
     location_raw_y = data->payload.fl[1];
     location_raw_speed_y = data->payload.fl[0];
 }
 
-void CAN_Callback_Location_ReadPos_Yaw(CAN_ConnMessage_t *data)
+void CAN_Callback_Locator_ReadPos_Yaw(CAN_ConnMessage_s *data)
 {
     float yaw = __ANGLE2RAD(data->payload.fl[1]);
     float temp_yaw = yaw + __ANGLE2RAD(90);

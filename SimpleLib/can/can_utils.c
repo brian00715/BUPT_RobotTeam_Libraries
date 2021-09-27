@@ -12,11 +12,11 @@
 // TODO: ZeroVoid	due:10/7	优化多中断管理
 
 /**
- * @v0.3.0 将CAN回调函数的通信数据结构改为CAN_ConnMessage_t，使回调函数能够知道DLC RTR等字段
+ * @v0.3.0 将CAN回调函数的通信数据结构改为CAN_ConnMessage_s，使回调函数能够知道DLC RTR等字段
  */
 
 #include "can_utils.h"
-#ifdef SL_CAN
+#ifdef SLIB_USE_CAN
 
 #include "hash.h"
 #include "flags.h"
@@ -27,14 +27,14 @@
 
 /* 全局变量----------------------------------------------------*/
 CAN_HandleTypeDef *slib_hcan;
-
-static CAN_ConnMessage_t CAN_RxBuffer = {0}; // CAN接收缓冲
+uint8_t CAN_ExeCallback_Flag = 0;
+uint8_t CAN_RxCallback_Flag = 0;
+static CAN_ConnMessage_s CAN_RxBuffer = {0}; // CAN接收缓冲
 CAN_Message_u CAN_TxData;                    // CAN要发送的数据
 uint32_t TxMailbox;
 CAN_TxHeaderTypeDef CAN_TxHeader;
 CAN_TxHeaderTypeDef CAN_ExtTxHeader;
 CAN_RxHeaderTypeDef CAN_RxHeader;
-int CAN_RxCallback_Flag = 0;
 
 /* 局部函数----------------------------------------------------*/
 static void CAN_Config(CAN_HandleTypeDef *hcan);
@@ -60,7 +60,7 @@ void CAN_Init(CAN_HandleTypeDef *hcan)
  * @param   callback    回调函数指针 data: can接收到数据联合体
  * @return	None
  */
-void CAN_CallbackAdd(const uint32_t id, void (*callback)(CAN_ConnMessage_t *data))
+void CAN_CallbackAdd(const uint32_t id, void (*callback)(CAN_ConnMessage_s *data))
 {
     uint32_t *can_id = (uint32_t *)malloc(sizeof(uint32_t));
     *can_id = id;
@@ -72,19 +72,19 @@ void CAN_CallbackAdd(const uint32_t id, void (*callback)(CAN_ConnMessage_t *data
  */
 void CAN_CallbackExe(void)
 {
-    void (*callback_func)(CAN_ConnMessage_t *) = (void (*)(CAN_ConnMessage_t *))HashTable_GetValue(CAN_CallbackTable, &CAN_RxBuffer.id); // 根据CAN ID取回回调函数
+    void (*callback_func)(CAN_ConnMessage_s *) = (void (*)(CAN_ConnMessage_s *))HashTable_GetValue(CAN_CallbackTable, &CAN_RxBuffer.id); // 根据CAN ID取回回调函数
     if (callback_func)
     {
         callback_func(&CAN_RxBuffer); // 执行回调函数
     }
     if (CAN_RxCallback_Flag)
     {
-#ifdef SL_NRF_COMM
+#ifdef SLIB_USE_NRF_COMM
         if (nrf_all_can_send || CAN_RxID == NRF_CAN_SID)
         {
             _can_rx_nrf_callback(&CAN_RxID, &rx_buffer);
         }
-#endif // SL_NRF_COMM
+#endif // SLIB_USE_NRF_COMM
         CAN_RxCallback(&CAN_RxBuffer);
     }
 }
@@ -179,7 +179,13 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan)
     return;
 }
 
-__weak void CAN_RxCallback(CAN_ConnMessage_t *data) {}
+/**
+ * @brief can接收中断回调函数
+ * 
+ * @param data 
+ * @return __weak 
+ */
+__weak void CAN_RxCallback(CAN_ConnMessage_s *data) {}
 
 void CAN_Config(CAN_HandleTypeDef *hcan)
 {
@@ -297,4 +303,4 @@ static int CAN_IDCmp(const void *a, const void *b)
     return (*((unsigned int *)a) == *((unsigned int *)b)) ? 0 : 1;
 }
 
-#endif // SL_CAN
+#endif // SLIB_USE_CAN

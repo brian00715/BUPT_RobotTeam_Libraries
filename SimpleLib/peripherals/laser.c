@@ -25,8 +25,8 @@ LASER laser_right;
 
 LASER_ADC laser_adc[AVERAGE_AMOUNT]; // 直接从端口读入的原始数据
 
-PID_t laser_ypos_pid = {200, 50, 0, 0, 0, 0, 0, 0.005};
-PID_t laser_xpos_pid = {700, 50, 0, 0, 0, 0, 0, 0.005};
+PID_s laser_ypos_pid = {200, 50, 0, 0, 0, 0, 0, 0.005};
+PID_s laser_xpos_pid = {700, 50, 0, 0, 0, 0, 0, 0.005};
 
 /**激光线性方程参数*/
 void laser_calculate_kb(LASER *sensor)

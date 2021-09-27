@@ -26,7 +26,7 @@ extern "C" {
  *******************************************************************************/
 #include "simplelib_cfg.h"
 
-#ifdef SL_NRF
+#ifdef SLIB_USE_NRF
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -401,7 +401,7 @@ void _nrf_flush_tx(void);
 void _nrf_flush_rx(void);
 void _nrf_flush_all(void);
 
-#endif // SL_NRF
+#endif // SLIB_USE_NRF
 
 
 #ifdef __cplusplus

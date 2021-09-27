@@ -72,9 +72,9 @@ extern BaseChassis_t BaseChassis;
 
 void Chassis_RemappingPathSetsSpeed(PlanPoint point_sets[], int point_num, double k, double b,
                                     float min_speed, float max_speed);
-void Chassis_GoToPoint(Point2D target);
+void Chassis_GoToPoint(Point2D_s target);
 void Chassis_TrackPoints(int index);
-float Chassis_Plan2PointSpeed(Point2D start, Point2D target,
+float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
                               float start_speed, float final_speed,
                               float max_speed);
 void Chassis_TrackVector(vec now_speed_vec, vec target_speed_vec, vec now_pos2next_target, vec distance_vec, float target_yaw);

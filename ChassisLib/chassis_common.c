@@ -23,10 +23,10 @@ float CMD_TargetSpeed = 0;
 float CMD_TargetDir = 0;
 float CMD_TargetOmega = 0;
 float CMD_TargetYaw = 0;
-PID_t NormalCorrPID_x = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // 请根据所使用的底盘具体调试
-PID_t NormalCorrPID_y = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-PID_t Chassis_SpeedCtrlPID, Chassis_OmegaCtrlPID;
-PID_t YawPID = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+PID_s NormalCorrPID_x = {0, 0, 0, 0, 0, 0, 0, 0, 0}; // 请根据所使用的底盘具体调试
+PID_s NormalCorrPID_y = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+PID_s Chassis_SpeedCtrlPID, Chassis_OmegaCtrlPID;
+PID_s YawPID = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 char YawTuning_Start;
 
 /**
@@ -114,11 +114,11 @@ void Chassis_UpdatePostureStatus()
 /**
  * @brief 跑单个点
  */
-void Chassis_GoToPoint(Point2D target)
+void Chassis_GoToPoint(Point2D_s target)
 {
     static int start_point_flag = 0;
     static int arrive_flag = 0;
-    static Point2D start;
+    static Point2D_s start;
     if (arrive_flag)
         return;
     float distance = sqrtf(pow(BaseChassis.PostureStatus.x - target.x, 2) +
@@ -146,7 +146,7 @@ void Chassis_GoToPoint(Point2D target)
     return;
 }
 
-Point2D p1;
+Point2D_s p1;
 /**
  * @brief 跑点集,使用跑单个点的方法
  * @param index 点集序号
@@ -188,7 +188,7 @@ void Chassis_TrackPoints(int index)
 /**
  * @brief 规划两点之间的速度，梯形速度规划
  */
-float Chassis_Plan2PointSpeed(Point2D start, Point2D target,
+float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
                               float start_speed, float final_speed,
                               float max_speed)
 {

@@ -29,7 +29,7 @@ extern int PrintChassisStatus_Flag;
  * 
  * @param data 
  */
-void CAN_Callback_Handle_Button(CAN_ConnMessage_t *data)
+void CAN_Callback_Handle_Button(CAN_ConnMessage_s *data)
 {
     uint8_t id;
     if ((uint8_t)data->payload.ui8[2] == 1)                                   // D2为弹起标志位，按下为1|按键按下时才解析指令
@@ -163,7 +163,7 @@ uint8_t Handle_CANRxOK = 0;
  *        左摇杆的深浅控制速度，方向控制偏航角
  * @param data 手柄摇杆的数据使用int16,can可以一次发送4个
  **/
-void CAN_Callback_Handle_Rocker(CAN_ConnMessage_t *data)
+void CAN_Callback_Handle_Rocker(CAN_ConnMessage_s *data)
 {
     Handle.left_rocker.x = (int)data->payload.i16[3];
     Handle.left_rocker.y = (int)data->payload.i16[2];

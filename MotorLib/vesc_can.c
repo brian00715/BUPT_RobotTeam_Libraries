@@ -29,139 +29,19 @@
 #include "can_utils.h"
 #include "main.h"
 
-/* Buffer Functions---------------------------------------------------*/
-// 用以将can的8位数据段逐位填充
-void buffer_append_int16(uint8_t *buffer, int16_t number, int32_t *index)
-{
-    buffer[(*index)++] = number >> 8;
-    buffer[(*index)++] = number;
-}
-
-void buffer_append_uint16(uint8_t *buffer, uint16_t number, int32_t *index)
-{
-    buffer[(*index)++] = number >> 8;
-    buffer[(*index)++] = number;
-}
-
-void buffer_append_int32(uint8_t *buffer, int32_t number, int32_t *index)
-{
-    buffer[(*index)++] = number >> 24;
-    buffer[(*index)++] = number >> 16;
-    buffer[(*index)++] = number >> 8;
-    buffer[(*index)++] = number;
-}
-
-void buffer_append_uint32(uint8_t *buffer, uint32_t number, int32_t *index)
-{
-    buffer[(*index)++] = number >> 24;
-    buffer[(*index)++] = number >> 16;
-    buffer[(*index)++] = number >> 8;
-    buffer[(*index)++] = number;
-}
-
-void buffer_append_float16(uint8_t *buffer, float number, float scale, int32_t *index)
-{
-    buffer_append_int16(buffer, (int16_t)(number * scale), index);
-}
-
-void buffer_append_float32(uint8_t *buffer, float number, float scale, int32_t *index)
-{
-    buffer_append_int32(buffer, (int32_t)(number * scale), index);
-}
-
-void buffer_append_float32_auto(uint8_t *buffer, float number, int32_t *index)
-{
-    int e = 0;
-    float sig = frexpf(number, &e);
-    float sig_abs = fabsf(sig);
-    uint32_t sig_i = 0;
-
-    if (sig_abs >= 0.5)
-    {
-        sig_i = (uint32_t)((sig_abs - 0.5f) * 2.0f * 8388608.0f);
-        e += 126;
-    }
-
-    uint32_t res = ((e & 0xFF) << 23) | (sig_i & 0x7FFFFF);
-    if (sig < 0)
-    {
-        res |= 1U << 31;
-    }
-
-    buffer_append_uint32(buffer, res, index);
-}
-
-int16_t buffer_get_int16(const uint8_t *buffer, int32_t *index)
-{
-    int16_t res = ((uint16_t)buffer[*index]) << 8 |
-                  ((uint16_t)buffer[*index + 1]);
-    *index += 2;
-    return res;
-}
-
-uint16_t buffer_get_uint16(const uint8_t *buffer, int32_t *index)
-{
-    uint16_t res = ((uint16_t)buffer[*index]) << 8 |
-                   ((uint16_t)buffer[*index + 1]);
-    *index += 2;
-    return res;
-}
-
-int32_t buffer_get_int32(const uint8_t *buffer, int32_t *index)
-{
-    int32_t res = ((uint32_t)buffer[*index]) << 24 |
-                  ((uint32_t)buffer[*index + 1]) << 16 |
-                  ((uint32_t)buffer[*index + 2]) << 8 |
-                  ((uint32_t)buffer[*index + 3]);
-    *index += 4;
-    return res;
-}
-
-uint32_t buffer_get_uint32(const uint8_t *buffer, int32_t *index)
-{
-    uint32_t res = ((uint32_t)buffer[*index]) << 24 |
-                   ((uint32_t)buffer[*index + 1]) << 16 |
-                   ((uint32_t)buffer[*index + 2]) << 8 |
-                   ((uint32_t)buffer[*index + 3]);
-    *index += 4;
-    return res;
-}
-
-float buffer_get_float16(const uint8_t *buffer, float scale, int32_t *index)
-{
-    return (float)buffer_get_int16(buffer, index) / scale;
-}
-
-float buffer_get_float32(const uint8_t *buffer, float scale, int32_t *index)
-{
-    return (float)buffer_get_int32(buffer, index) / scale;
-}
-
-float buffer_get_float32_auto(const uint8_t *buffer, int32_t *index)
-{
-    uint32_t res = buffer_get_uint32(buffer, index);
-
-    int e = (res >> 23) & 0xFF;
-    uint32_t sig_i = res & 0x7FFFFF;
-    bool neg = res & (1U << 31);
-
-    float sig = 0.0;
-    if (e != 0 || sig_i != 0)
-    {
-        sig = (float)sig_i / (8388608.0 * 2.0) + 0.5;
-        e -= 126;
-    }
-
-    if (neg)
-    {
-        sig = -sig;
-    }
-
-    return ldexpf(sig, e);
-}
-/* Buffer Functions [END]---------------------------------------------------*/
-
 /* CAN Functions---------------------------------------------------*/
+
+int VESC_StatusBag_Flag = 0;
+int VESC_SwitchPrintInfo_Flag = 0;
+/**
+ * @brief 本杰明电调反馈状态包解析函数
+ **/
+void CAN_Callback_VESC(MotorDriver_s *vesc, CAN_Message_u *data)
+{
+  int32_t index = 0;
+  vesc->now_position = buffer_get_int16(data->ui8, &index) / 50;
+  vesc->now_rpm = buffer_get_int32(data->ui8, &index);
+}
 
 void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len)
 {
@@ -385,6 +265,138 @@ void comm_can_conf_current_limits_in(uint8_t controller_id,
                               ((uint32_t)(store ? CAN_PACKET_CONF_STORE_CURRENT_LIMITS_IN : CAN_PACKET_CONF_CURRENT_LIMITS_IN) << 8),
                           buffer, send_index);
 }
+
+/* Buffer Functions---------------------------------------------------*/
+// 用以将can的8位数据段逐位填充
+void buffer_append_int16(uint8_t *buffer, int16_t number, int32_t *index)
+{
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+void buffer_append_uint16(uint8_t *buffer, uint16_t number, int32_t *index)
+{
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+void buffer_append_int32(uint8_t *buffer, int32_t number, int32_t *index)
+{
+    buffer[(*index)++] = number >> 24;
+    buffer[(*index)++] = number >> 16;
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+void buffer_append_uint32(uint8_t *buffer, uint32_t number, int32_t *index)
+{
+    buffer[(*index)++] = number >> 24;
+    buffer[(*index)++] = number >> 16;
+    buffer[(*index)++] = number >> 8;
+    buffer[(*index)++] = number;
+}
+
+void buffer_append_float16(uint8_t *buffer, float number, float scale, int32_t *index)
+{
+    buffer_append_int16(buffer, (int16_t)(number * scale), index);
+}
+
+void buffer_append_float32(uint8_t *buffer, float number, float scale, int32_t *index)
+{
+    buffer_append_int32(buffer, (int32_t)(number * scale), index);
+}
+
+void buffer_append_float32_auto(uint8_t *buffer, float number, int32_t *index)
+{
+    int e = 0;
+    float sig = frexpf(number, &e);
+    float sig_abs = fabsf(sig);
+    uint32_t sig_i = 0;
+
+    if (sig_abs >= 0.5)
+    {
+        sig_i = (uint32_t)((sig_abs - 0.5f) * 2.0f * 8388608.0f);
+        e += 126;
+    }
+
+    uint32_t res = ((e & 0xFF) << 23) | (sig_i & 0x7FFFFF);
+    if (sig < 0)
+    {
+        res |= 1U << 31;
+    }
+
+    buffer_append_uint32(buffer, res, index);
+}
+
+int16_t buffer_get_int16(const uint8_t *buffer, int32_t *index)
+{
+    int16_t res = ((uint16_t)buffer[*index]) << 8 |
+                  ((uint16_t)buffer[*index + 1]);
+    *index += 2;
+    return res;
+}
+
+uint16_t buffer_get_uint16(const uint8_t *buffer, int32_t *index)
+{
+    uint16_t res = ((uint16_t)buffer[*index]) << 8 |
+                   ((uint16_t)buffer[*index + 1]);
+    *index += 2;
+    return res;
+}
+
+int32_t buffer_get_int32(const uint8_t *buffer, int32_t *index)
+{
+    int32_t res = ((uint32_t)buffer[*index]) << 24 |
+                  ((uint32_t)buffer[*index + 1]) << 16 |
+                  ((uint32_t)buffer[*index + 2]) << 8 |
+                  ((uint32_t)buffer[*index + 3]);
+    *index += 4;
+    return res;
+}
+
+uint32_t buffer_get_uint32(const uint8_t *buffer, int32_t *index)
+{
+    uint32_t res = ((uint32_t)buffer[*index]) << 24 |
+                   ((uint32_t)buffer[*index + 1]) << 16 |
+                   ((uint32_t)buffer[*index + 2]) << 8 |
+                   ((uint32_t)buffer[*index + 3]);
+    *index += 4;
+    return res;
+}
+
+float buffer_get_float16(const uint8_t *buffer, float scale, int32_t *index)
+{
+    return (float)buffer_get_int16(buffer, index) / scale;
+}
+
+float buffer_get_float32(const uint8_t *buffer, float scale, int32_t *index)
+{
+    return (float)buffer_get_int32(buffer, index) / scale;
+}
+
+float buffer_get_float32_auto(const uint8_t *buffer, int32_t *index)
+{
+    uint32_t res = buffer_get_uint32(buffer, index);
+
+    int e = (res >> 23) & 0xFF;
+    uint32_t sig_i = res & 0x7FFFFF;
+    bool neg = res & (1U << 31);
+
+    float sig = 0.0;
+    if (e != 0 || sig_i != 0)
+    {
+        sig = (float)sig_i / (8388608.0 * 2.0) + 0.5;
+        e -= 126;
+    }
+
+    if (neg)
+    {
+        sig = -sig;
+    }
+
+    return ldexpf(sig, e);
+}
+/* Buffer Functions [END]---------------------------------------------------*/
 
 //
 ///**

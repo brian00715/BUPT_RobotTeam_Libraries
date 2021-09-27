@@ -20,7 +20,7 @@ extern "C"
 // #include "dji_board_can.h"
 #include <string.h>
 
-void cmd_func_init(void);
+void CMD_FuncInit(void);
 
 
 #ifdef __cplusplus

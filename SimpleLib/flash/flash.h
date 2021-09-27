@@ -5,7 +5,7 @@
 #include "simplelib_cfg.h"
 #include "stdint.h"
 
-#ifdef SL_FLASH
+#ifdef SLIB_USE_FLASH
 
 #define u32 uint32_t
 #define u16 uint16_t
@@ -22,6 +22,6 @@ u16 STMFLASH_ReadHalfWord(u32 faddr);
 u8 STMFLASH_ReadByte(u32 faddr);
 float STMFLASH_ReadFloat(u32 faddr);
 //FLASH_Status FLASH_ProgramFloat(uint32_t Address, float Data);
-#endif // SL_FLASH
+#endif // SLIB_USE_FLASH
 
 #endif

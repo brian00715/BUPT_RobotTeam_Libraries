@@ -1,7 +1,7 @@
 #ifndef __STMFLASH_H
 #define __STMFLASH_H
 #include "simplelib_cfg.h"
-#ifdef SL_FLASH
+#ifdef SLIB_USE_FLASH
 
 #include "main.h"
 #include "flash.h"
@@ -66,5 +66,5 @@ extern float flash_data[FLASH_SIZE];
  
 void write_prams();
 void load_prams();
-#endif // SL_FLASH
+#endif // SLIB_USE_FLASH
 #endif

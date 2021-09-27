@@ -360,7 +360,7 @@ void CMD_YawTuning(int argc, char **argv)
 {
     BaseChassis.ctrl_mode = CTRL_MODE_TUNING;
     CMD_TargetYaw = __ANGLE2RAD(atof(argv[1]));
-    extern PID_t YawPID;
+    extern PID_s YawPID;
     float kp = atof(argv[2]);
     float kd = atof(argv[3]);
     float ki = atof(argv[4]);
@@ -379,7 +379,7 @@ void CMD_YawTuning(int argc, char **argv)
  */
 void CMD_SetYawPID(int argc, char **argv)
 {
-    extern PID_t YawPID;
+    extern PID_s YawPID;
     float kp = atof(argv[1]);
     float kd = atof(argv[2]);
     float ki = atof(argv[3]);
@@ -423,7 +423,7 @@ void CMD_SetDriveMotorsDuty(int argc, char **argv)
  */
 void CMD_SetNormalCorrPID(int argc, char **argv)
 {
-    extern PID_t NormalCorrPID_x, NormalCorrPID_y;
+    extern PID_s NormalCorrPID_x, NormalCorrPID_y;
     float kp = atof(argv[1]);
     float kd = atof(argv[2]);
     float ki = atof(argv[3]);
@@ -445,7 +445,7 @@ void CMD_SetNormalCorrPID(int argc, char **argv)
  */
 void CMD_SetLockPID(int argc, char **argv)
 {
-    extern PID_t LockPID;
+    extern PID_s LockPID;
     float kp = atof(argv[1]);
     float kd = atof(argv[2]);
     float ki = atof(argv[3]);
@@ -473,45 +473,45 @@ void CMD_SwitchPrintMotorStatus(int argc, char **argv)
 #endif
 /********************************END***********************************/
 
-void cmd_func_init(void)
+void CMD_FuncInit(void)
 {
-    cmd_add("hello", "", CMD_Hello);
+    CMD_Add("hello", "", CMD_Hello);
 
 #ifdef USE_MOTORLIB
     //motor
-    cmd_add("vesc_switch_print_info", "0 to close;1 to open", CMD_VESC_SwitchPrintInfo);
-    cmd_add("rm", "", CMD_RMMtr_Ctrl);
-    cmd_add("SwitchPrintMotorStatus", "press to change ", CMD_SwitchPrintMotorStatus);
+    CMD_Add("vesc_switch_print_info", "0 to close;1 to open", CMD_VESC_SwitchPrintInfo);
+    CMD_Add("rm", "", CMD_RMMtr_Ctrl);
+    CMD_Add("SwitchPrintMotorStatus", "press to change ", CMD_SwitchPrintMotorStatus);
 #endif
 #ifdef USE_CHASSISLIB
     //chassis
-    cmd_add("ChangePosMode", "", CMD_ChangePosMode);
-    cmd_add("ChangeCtrlMode", "", CMD_ChangeCtrlMode);
-    cmd_add("SwitchPrintTargetStatus", "press to change ", CMD_SwitchPrintTargetStatus);
-    cmd_add("SwitchPrintChassisStatus", "", CMD_SwitchPrintChassisStatus);
-    cmd_add("YawTuning", "<TargetYaw><kp><kd><ki><intTime><StartFlag>", CMD_YawTuning);
-    cmd_add("SetYawPID", "<kp><kd><ki><intTime>", CMD_SetYawPID);
-    cmd_add("SetNormalCorrPID", "<kp><kd><ki><intTime>", CMD_SetNormalCorrPID);
-    cmd_add("SetDriveMotorCurr", "", CMD_SetDriveMotorsCurr);
-    cmd_add("SetDriveMotorDuty", "", CMD_SetDriveMotorsDuty);
-    cmd_add("SetTargetPoint", "<x><y>", CMD_Chassis_SetTargetPoint);
-    cmd_add("SetLockPID", "", CMD_SetLockPID);
+    CMD_Add("ChangePosMode", "", CMD_ChangePosMode);
+    CMD_Add("ChangeCtrlMode", "", CMD_ChangeCtrlMode);
+    CMD_Add("SwitchPrintTargetStatus", "press to change ", CMD_SwitchPrintTargetStatus);
+    CMD_Add("SwitchPrintChassisStatus", "", CMD_SwitchPrintChassisStatus);
+    CMD_Add("YawTuning", "<TargetYaw><kp><kd><ki><intTime><StartFlag>", CMD_YawTuning);
+    CMD_Add("SetYawPID", "<kp><kd><ki><intTime>", CMD_SetYawPID);
+    CMD_Add("SetNormalCorrPID", "<kp><kd><ki><intTime>", CMD_SetNormalCorrPID);
+    CMD_Add("SetDriveMotorCurr", "", CMD_SetDriveMotorsCurr);
+    CMD_Add("SetDriveMotorDuty", "", CMD_SetDriveMotorsDuty);
+    CMD_Add("SetTargetPoint", "<x><y>", CMD_Chassis_SetTargetPoint);
+    CMD_Add("SetLockPID", "", CMD_SetLockPID);
 
     // teleop
-    cmd_add("Teleop_Acc", "", CMD_Chassis_Teleop_Acc);
-    cmd_add("Teleop_Dec", "", CMD_Chassis_Teleop_Dec);
-    cmd_add("Teleop_GoAhead", "", CMD_Chassis_Teleop_GoAhead);
-    cmd_add("Teleop_GoBack", "", CMD_Chassis_Teleop_GoBack);
-    cmd_add("Teleop_TurnLeft", "", CMD_Chassis_Teleop_TurnLeft);
-    cmd_add("Teleop_TurnRight", "", CMD_Chassis_Teleop_TurnRight);
-    cmd_add("Teleop_ShiftLeft", "", CMD_Chassis_Teleop_ShiftLeft);
-    cmd_add("Teleop_ShiftRight", "", CMD_Chassis_Teleop_ShiftRight);
-    cmd_add("Teleop_Stop", "", CMD_Chassis_Teleop_Stop);
+    CMD_Add("Teleop_Acc", "", CMD_Chassis_Teleop_Acc);
+    CMD_Add("Teleop_Dec", "", CMD_Chassis_Teleop_Dec);
+    CMD_Add("Teleop_GoAhead", "", CMD_Chassis_Teleop_GoAhead);
+    CMD_Add("Teleop_GoBack", "", CMD_Chassis_Teleop_GoBack);
+    CMD_Add("Teleop_TurnLeft", "", CMD_Chassis_Teleop_TurnLeft);
+    CMD_Add("Teleop_TurnRight", "", CMD_Chassis_Teleop_TurnRight);
+    CMD_Add("Teleop_ShiftLeft", "", CMD_Chassis_Teleop_ShiftLeft);
+    CMD_Add("Teleop_ShiftRight", "", CMD_Chassis_Teleop_ShiftRight);
+    CMD_Add("Teleop_Stop", "", CMD_Chassis_Teleop_Stop);
 #endif
 
 #ifdef USE_LASER
-    cmd_add("laser_print_diatance", "", cmd_laser_print_diatance);
-    cmd_add("laser_switch_print_pos", "", CMD_Laser_SwitchPrintPos);
-    cmd_add("laser_switch_print_adc_value", "", CMD_Laser_SwitchPrintADCValue);
+    CMD_Add("laser_print_diatance", "", cmd_laser_print_diatance);
+    CMD_Add("laser_switch_print_pos", "", CMD_Laser_SwitchPrintPos);
+    CMD_Add("laser_switch_print_adc_value", "", CMD_Laser_SwitchPrintADCValue);
 #endif
 }
