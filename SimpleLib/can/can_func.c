@@ -11,9 +11,9 @@
  */
 
 /* 在此处添加包含CAN回调函数的头文件----------------------------------------------------*/
-#include "handle.h"
-#include "dji_board_can.h"
-#include "base_chassis.h"
+// #include "handle.h"
+// #include "dji_board_can.h"
+// #include "base_chassis.h"
 
 #include "can_func.h"
 #include "cmd.h"
@@ -29,13 +29,13 @@ uint32_t CAN_AcceptID_Std[8] = {324, 325, 0x281, 0x282, 204, 205, 206, 3211}; //
  */
 void CAN_FuncInit()
 {
-    CAN_CallbackAdd(324, CAN_Callback_Handle_Rocker);
-    CAN_CallbackAdd(325, CAN_Callback_Handle_Button);
-    CAN_CallbackAdd(0x281, CAN_Callback_DJI_ReadInfo);
-    CAN_CallbackAdd(0x282, CAN_Callback_DJI_ReadAllPosInfo);
-    CAN_CallbackAdd(204, CAN_Callback_Location_ReadPos_X);
-    CAN_CallbackAdd(205, CAN_Callback_Location_ReadPos_Y);
-    CAN_CallbackAdd(206, CAN_Callback_Location_ReadPos_Yaw);
+    // CAN_CallbackAdd(324, CAN_Callback_Handle_Rocker);
+    // CAN_CallbackAdd(325, CAN_Callback_Handle_Button);
+    // CAN_CallbackAdd(0x281, CAN_Callback_DJI_ReadInfo);
+    // CAN_CallbackAdd(0x282, CAN_Callback_DJI_ReadAllPosInfo);
+    // CAN_CallbackAdd(204, CAN_Callback_Location_ReadPos_X);
+    // CAN_CallbackAdd(205, CAN_Callback_Location_ReadPos_Y);
+    // CAN_CallbackAdd(206, CAN_Callback_Location_ReadPos_Yaw);
 }
 
 #endif // SL_CAN

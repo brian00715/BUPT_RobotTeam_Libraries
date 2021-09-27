@@ -1,8 +1,9 @@
 #include "cmd_func.h"
-#include "base_chassis.h"
-#include "rm_cxxx_can.h"
-#include "rudder_chassis.h"
-#include "motor_driver.h"
+// TODO 分离ChassisLib和SimpleLib 
+// #include "base_chassis.h"
+// #include "rm_cxxx_can.h"
+// #include "rudder_chassis.h"
+// #include "motor_driver.h"
 
 void CMD_Hello(int argc, char *argv[])
 {
@@ -45,7 +46,7 @@ void CMD_Laser_SwitchPrintADCValue(int argc, char *argv[])
 #endif // USE_LASER
 
 /********************************[电机上位机控制]***********************************/
-
+#ifdef USE_MOTORLIB
 void CMD_VESC_SwitchPrintInfo(int argc, char *argv[])
 {
     if (atoi(argv[1]) == 0)
@@ -217,10 +218,11 @@ void CMD_RMMtr_Ctrl(int argc, char *argv[])
                 RM_MotorStatus[2].pos, RM_MotorStatus[3].pos);
     }
 }
-
+#endif
 /********************************END***********************************/
 
 /********************************[底盘控制]***********************************/
+#ifdef USE_CHASSISLIB
 extern float CMD_TargetSpeed;
 extern float CMD_TargetDir;
 extern float CMD_TargetOmega;
@@ -468,18 +470,20 @@ void CMD_SwitchPrintMotorStatus(int argc, char **argv)
     }
 }
 
-
+#endif
 /********************************END***********************************/
 
 void cmd_func_init(void)
 {
     cmd_add("hello", "", CMD_Hello);
 
+#ifdef USE_MOTORLIB
     //motor
     cmd_add("vesc_switch_print_info", "0 to close;1 to open", CMD_VESC_SwitchPrintInfo);
     cmd_add("rm", "", CMD_RMMtr_Ctrl);
     cmd_add("SwitchPrintMotorStatus", "press to change ", CMD_SwitchPrintMotorStatus);
-
+#endif
+#ifdef USE_CHASSISLIB
     //chassis
     cmd_add("ChangePosMode", "", CMD_ChangePosMode);
     cmd_add("ChangeCtrlMode", "", CMD_ChangeCtrlMode);
@@ -503,6 +507,7 @@ void cmd_func_init(void)
     cmd_add("Teleop_ShiftLeft", "", CMD_Chassis_Teleop_ShiftLeft);
     cmd_add("Teleop_ShiftRight", "", CMD_Chassis_Teleop_ShiftRight);
     cmd_add("Teleop_Stop", "", CMD_Chassis_Teleop_Stop);
+#endif
 
 #ifdef USE_LASER
     cmd_add("laser_print_diatance", "", cmd_laser_print_diatance);
