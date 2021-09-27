@@ -23,10 +23,10 @@
 #include "cmd.h"
 #include "can_func.h"
 #include <stdlib.h>
-#include "motor_driver.h"
+// TODO 分离ChassisLib和SimpleLib // #include "motor_driver.h"
 
 /* 全局变量----------------------------------------------------*/
-CAN_HandleTypeDef HCAN;
+CAN_HandleTypeDef *slib_hcan;
 
 static CAN_ConnMessage_t CAN_RxBuffer = {0}; // CAN接收缓冲
 CAN_Message_u CAN_TxData;                    // CAN要发送的数据
@@ -44,8 +44,8 @@ static int CAN_IDCmp(const void *, const void *);
 
 void CAN_Init(CAN_HandleTypeDef *hcan)
 {
-    HCAN = *hcan;
-    CAN_Config(&HCAN);
+    slib_hcan = hcan;
+    CAN_Config(slib_hcan);
     // HAL_CAN_ActivateNotification(&hcan1, CAN_IT_TX_MAILBOX_EMPTY); //开启发送邮箱空中断
     if (CAN_CallbackTable == NULL)
     {
@@ -108,7 +108,7 @@ void CAN_SendTest(void)
     CAN_TxData.in[1] = 0xAD;
     CAN_TxHeader.StdId = 1;
     uprintf("send data\r\n");
-    HAL_CAN_AddTxMessage(&HCAN, &CAN_TxHeader, CAN_TxData.ui8, &TxMailbox);
+    HAL_CAN_AddTxMessage(slib_hcan, &CAN_TxHeader, CAN_TxData.ui8, &TxMailbox);
 }
 
 /** 
@@ -125,9 +125,9 @@ int CAN_SendStdMsg(uint16_t std_id, CAN_Message_u *msg)
     CAN_TxHeader.StdId = std_id;
     CAN_TxHeader.IDE = CAN_ID_STD;
     CAN_TxHeader.RTR = CAN_RTR_DATA;
-    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0) // 等待发送邮箱空
+    while (HAL_CAN_GetTxMailboxesFreeLevel(slib_hcan) == 0) // 等待发送邮箱空
         HAL_Delay(1);
-    if (HAL_CAN_AddTxMessage(&HCAN, &CAN_TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
+    if (HAL_CAN_AddTxMessage(slib_hcan, &CAN_TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
     {
         uprintf("Error: CAN can't send msg.\r\n");
         return 1;
@@ -165,9 +165,9 @@ int CAN_SendExtMsg(uint32_t ext_id, CAN_Message_u *msg)
     CAN_TxHeader.ExtId = ext_id;
     CAN_TxHeader.IDE = CAN_ID_EXT;
     CAN_TxHeader.RTR = CAN_RTR_DATA;
-    while (HAL_CAN_GetTxMailboxesFreeLevel(&hcan1) == 0) // 等待发送邮箱空
+    while (HAL_CAN_GetTxMailboxesFreeLevel(slib_hcan) == 0) // 等待发送邮箱空
         HAL_Delay(1);
-    if (HAL_CAN_AddTxMessage(&HCAN, &CAN_TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
+    if (HAL_CAN_AddTxMessage(slib_hcan, &CAN_TxHeader, msg->ui8, &TxMailbox) != HAL_OK)
     {
         return 1;
     }

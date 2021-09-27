@@ -31,11 +31,13 @@ extern "C"
         CAN_Message_u payload;
     } CAN_ConnMessage_t;
 
-    extern CAN_HandleTypeDef HCAN;
+    /* slib_hcan允许simplelib其他组件访问, HCAN宏用于兼容旧版本 */
+    extern CAN_HandleTypeDef *slib_hcan;
+    #define HCAN    (*slib_hcan);
     extern CAN_TxHeaderTypeDef CAN_TxHeader;
     extern CAN_RxHeaderTypeDef CAN_RxHeader;
     extern CAN_TxHeaderTypeDef CAN_ExtTxHeader;
-    extern uint32_t TxMailbokx;
+    extern uint32_t TxMailbox;
     extern CAN_Message_u CAN_RxData;
     extern CAN_Message_u CAN_TxData;
     extern int CAN_ExeCallback_Flag;

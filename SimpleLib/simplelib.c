@@ -11,7 +11,7 @@
 
 #include "simplelib.h"
 
-asm(".global _printf_float");
+// asm(".global _printf_float");
 
 /**
  * @brief	初始化配置

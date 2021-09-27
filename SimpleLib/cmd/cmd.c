@@ -13,14 +13,14 @@
 #include <stdlib.h>
 #include "cmd.h"
 #include "hash.h"
-#include "base_chassis.h"
+// TODO 分离ChassisLib和SimpleLib // #include "base_chassis.h"
 
 /* 变量定义 -----------------------------------------------------*/
 static const char *delim = ", \r\n\0";
 static HashTable cmd_table;
 
-UART_HandleTypeDef CMD_UART;
-#define Location_UART (huart6) // action全场定位接口
+UART_HandleTypeDef *slib_cmd_huart;
+// TODO 分离ChassisLib和SimpleLib // #define Location_UART (huart6) // action全场定位接口
 char *cmd_argv[MAX_ARGC];
 uint8_t DMAaRxBuffer[DMA_BUFFER_SIZE];
 char DMAUSART_RX_BUF[DMA_BUFFER_SIZE];
@@ -45,14 +45,14 @@ static void _cmd_help(const void *key, void **value, void *c1);
 
 void usart_DMA_init(UART_HandleTypeDef *cmd_usart)
 {
-    CMD_UART = *cmd_usart;
+    slib_cmd_huart = cmd_usart;
     // 首次DMA接收，务必开启
-    HAL_UART_Receive_DMA(&CMD_UART, (uint8_t *)&DMAaRxBuffer, 99);
-    HAL_UART_Receive_DMA(&Location_UART, (uint8_t *)&DMAaRxBuffer_vega, 99); //开启DMA
+    HAL_UART_Receive_DMA(slib_cmd_huart, (uint8_t *)&DMAaRxBuffer, 99);
+    // TODO 分离ChassisLib和SimpleLib // HAL_UART_Receive_DMA(&Location_UART, (uint8_t *)&DMAaRxBuffer_vega, 99); //开启DMA
     cmd_init();
-    // 开启空闲中断
-    __HAL_UART_ENABLE_IT(&CMD_UART, UART_IT_IDLE);
-    __HAL_UART_ENABLE_IT(&Location_UART, UART_IT_IDLE);
+    // TODO 分离ChassisLib和SimpleLib // 开启空闲中断
+    __HAL_UART_ENABLE_IT(slib_cmd_huart, UART_IT_IDLE);
+    // __HAL_UART_ENABLE_IT(&Location_UART, UART_IT_IDLE);
 }
 
 /**
@@ -81,18 +81,23 @@ void USART_DMA_Exe()
 
 /**
  * @brief 串口中断回调函数
- * @param hurat 串口号
+ * @param huart 串口号
  */
 void HAL_UART_IDLECallback(UART_HandleTypeDef *huart)
 {
-    if (huart->Instance == CMD_UART.Instance)
+    if (huart->Instance == slib_cmd_huart->Instance)
     {
         uint8_t temp;
         __HAL_UART_CLEAR_IDLEFLAG(huart); //清除空闲标志
-        temp = huart->Instance->SR;
-        temp = huart->Instance->DR; //读出串口的数据，防止在关闭DMA期间有数据进来，造成ORE错误
-        UNUSED(temp);
-        HAL_UART_DMAStop(&CMD_UART); //停止本次DMA
+        // temp = huart->Instance->SR;
+        // temp = huart->Instance->DR; //读出串口的数据，防止在关闭DMA期间有数据进来，造成ORE错误
+        // UNUSED(temp);
+        /* HAL_UART_DMAStop(&CMD_UART); */ //停止本次DMA
+        CLEAR_BIT(huart->Instance->CR3, USART_CR3_DMAR);
+        HAL_DMA_Abort(huart->hdmarx);
+        CLEAR_BIT(huart->Instance->CR1, (USART_CR1_RXNEIE | USART_CR1_PEIE));               \
+        CLEAR_BIT(huart->Instance->CR3, USART_CR3_EIE);
+        huart->RxState = HAL_UART_STATE_READY;
         uint8_t *clr = DMAaRxBuffer;
         while (*(clr++) == '\0' && clr < DMAaRxBuffer + DMA_BUFFER_SIZE) // 找到开头，避免传输噪声
             ;
@@ -101,27 +106,27 @@ void HAL_UART_IDLECallback(UART_HandleTypeDef *huart)
         {
             DMA_RxOK_Flag = 1;
         }
-        memset(DMAaRxBuffer, 0, 98);
-        HAL_UART_Receive_DMA(&CMD_UART, (uint8_t *)&DMAaRxBuffer, DMA_BUFFER_SIZE); // 开启下一次中断
+        memset(DMAaRxBuffer, 0, DMA_BUFFER_SIZE);
+        HAL_UART_Receive_DMA(slib_cmd_huart, (uint8_t *)&DMAaRxBuffer, DMA_BUFFER_SIZE); // 开启下一次中断
     }
+    // TODO 分离ChassisLib和SimpleLib 
+    // if (huart->Instance == Location_UART.Instance)
+    // {
+    //     uint8_t temp;
+    //     __HAL_UART_CLEAR_IDLEFLAG(huart); //清除函数空闲标志
+    //     temp = huart->Instance->SR;
+    //     temp = huart->Instance->DR; //读出串口的数据，防止在关闭DMA期间有数据进来，造成ORE错误
+    //     //temp = hdma_usart3_rx.Instance->CNDTR; // 获取剩余字节数
+    //     HAL_UART_DMAStop(&Location_UART); //停止本次DMA
+    //     UNUSED(temp);
+    //     strcpy((char *)DMAUSART_RX_BUF_vega, (char *)DMAaRxBuffer_vega);
+    //     if (DMAUSART_RX_BUF_vega[0] != '\0')
+    //         DMA_RxOK_Flag_vega = 1;
 
-    if (huart->Instance == Location_UART.Instance)
-    {
-        uint8_t temp;
-        __HAL_UART_CLEAR_IDLEFLAG(huart); //清除函数空闲标志
-        temp = huart->Instance->SR;
-        temp = huart->Instance->DR; //读出串口的数据，防止在关闭DMA期间有数据进来，造成ORE错误
-        //temp = hdma_usart3_rx.Instance->CNDTR; // 获取剩余字节数
-        HAL_UART_DMAStop(&Location_UART); //停止本次DMA
-        UNUSED(temp);
-        strcpy((char *)DMAUSART_RX_BUF_vega, (char *)DMAaRxBuffer_vega);
-        if (DMAUSART_RX_BUF_vega[0] != '\0')
-            DMA_RxOK_Flag_vega = 1;
-
-        USART_DMA_Exe_Location();                                                // 将全场定位通过串口发送的消息存入
-        memset(DMAaRxBuffer_vega, 0, 98);                                        // 缓存数组清零
-        HAL_UART_Receive_DMA(&Location_UART, (uint8_t *)&DMAaRxBuffer_vega, 99); //开启DMA串口中断
-    }
+    //     USART_DMA_Exe_Location();                                                // 将全场定位通过串口发送的消息存入
+    //     memset(DMAaRxBuffer_vega, 0, 98);                                        // 缓存数组清零
+    //     HAL_UART_Receive_DMA(&Location_UART, (uint8_t *)&DMAaRxBuffer_vega, 99); //开启DMA串口中断
+    // }
 }
 
 /**
@@ -208,7 +213,7 @@ void uprintf(char *fmt, ...)
     va_end(arg_ptr);
 
     // 重新设置USART准备状态，并解锁串口,否则无法再次输出
-    CMD_UART.gState = HAL_UART_STATE_READY;
+    // CMD_UART.gState = HAL_UART_STATE_READY;
     //__HAL_UNLOCK(&CMD_UART);
     //HAL_UART_Transmit_DMA(&CMD_UART, (uint8_t *)print_buffer, size);
     /*
@@ -216,9 +221,13 @@ void uprintf(char *fmt, ...)
         HAL_Delay(10);
     }
     */
+   // 等待DMA准备完毕
+    while (HAL_DMA_GetState(slib_cmd_huart->hdmatx) == HAL_DMA_STATE_BUSY)
+        HAL_Delay(1);
     // TODO:	ZeroVoid	due:10/7	优化输出，异步输出，可能纯在busy时再次调用，会被忽略，输出缺失
-    //while(CMD_UART.hdmatx->State != HAL_DMA_STATE_READY);
-    HAL_UART_Transmit(&CMD_UART, (uint8_t *)print_buffer, size, 0xffff);
+    // while(CMD_UART.hdmatx->State != HAL_DMA_STATE_READY);
+    // HAL_UART_Transmit(&CMD_UART, (uint8_t *)print_buffer, size, 0xffff);
+    HAL_UART_Transmit_DMA(slib_cmd_huart, (uint8_t *)print_buffer, size);
 }
 
 void uprintf_to(UART_HandleTypeDef *huart, char *fmt, ...)
@@ -229,6 +238,10 @@ void uprintf_to(UART_HandleTypeDef *huart, char *fmt, ...)
     size = vsnprintf(print_buffer, PRINT_BUFFER_SIZE, fmt, arg_ptr);
     va_end(arg_ptr);
 
+    // 等待DMA准备完毕
+    while (HAL_DMA_GetState(slib_cmd_huart->hdmatx) == HAL_DMA_STATE_BUSY)
+        HAL_Delay(1);
+    
     HAL_UART_Transmit_DMA(huart, (uint8_t *)print_buffer, size);
     // HAL_UART_Transmit(huart,(uint8_t *)uart_buffer,size,1000);
 }
@@ -269,56 +282,57 @@ static void _cmd_help(const void *key, void **value, void *c1)
     uprintf("|%31s: %-31s|\r\n", key, usage);
 }
 
-/**
- * @brief 将全场定位从串口收到的数据存入
- *        说明: 更新底盘目前位置的函数
- *        移植者: zx
- * @param void
- * @return void 注：直接将结果写入了底盘结构体中
- */
-void USART_DMA_Exe_Location()
-{
-    if (DMA_RxOK_Flag_vega)
-    {
-        for (int j = 0; j < 99; j++)
-        {
-            if (DMAaRxBuffer_vega[j] == 0x0d) // 0x0d是回车符，0x0a是换行符
-            {
-                if (DMAaRxBuffer_vega[j + 1] == 0x0a && j < 73 && DMAaRxBuffer_vega[j + 26] == 0x0a && DMAaRxBuffer_vega[j + 27] == 0x0d)
-                {
-                    for (int k = 0; k < 24; k++)
-                    {
-                        VegaData_t.data[k] = DMAaRxBuffer_vega[j + 2 + k];
-                    }
-/**
- * @note    今后最好在cmd.h中声明一个通用的全局底盘状态结构体变量，不同类型的底盘结构体只需包含此结构体的指针即可获取信息
- */
-#ifdef NORMAL_CHASSIS
-                    chassis.vega_angle = VegaData_t.ActVal[0];
-                    chassis.vega_pos_x = VegaData_t.ActVal[3] / 1000;
-                    chassis.vega_pos_y = VegaData_t.ActVal[4] / 1000;
-#endif
+// TODO 分离ChassisLib和SimpleLib 
+// /**
+//  * @brief 将全场定位从串口收到的数据存入
+//  *        说明: 更新底盘目前位置的函数
+//  *        移植者: zx
+//  * @param void
+//  * @return void 注：直接将结果写入了底盘结构体中
+//  */
+// void USART_DMA_Exe_Location()
+// {
+//     if (DMA_RxOK_Flag_vega)
+//     {
+//         for (int j = 0; j < 99; j++)
+//         {
+//             if (DMAaRxBuffer_vega[j] == 0x0d) // 0x0d是回车符，0x0a是换行符
+//             {
+//                 if (DMAaRxBuffer_vega[j + 1] == 0x0a && j < 73 && DMAaRxBuffer_vega[j + 26] == 0x0a && DMAaRxBuffer_vega[j + 27] == 0x0d)
+//                 {
+//                     for (int k = 0; k < 24; k++)
+//                     {
+//                         VegaData_t.data[k] = DMAaRxBuffer_vega[j + 2 + k];
+//                     }
+// /**
+//  * @note    今后最好在cmd.h中声明一个通用的全局底盘状态结构体变量，不同类型的底盘结构体只需包含此结构体的指针即可获取信息
+//  */
+// #ifdef NORMAL_CHASSIS
+//                     chassis.vega_angle = VegaData_t.ActVal[0];
+//                     chassis.vega_pos_x = VegaData_t.ActVal[3] / 1000;
+//                     chassis.vega_pos_y = VegaData_t.ActVal[4] / 1000;
+// #endif
 
-                    float x = VegaData_t.ActVal[3] / 1000;
-                    float y = VegaData_t.ActVal[4] / 1000;
-                    float yaw = VegaData_t.ActVal[0];
-                    float temp_yaw = __ANGLE2RAD(yaw + 90);
-                    if (temp_yaw < 0)
-                    {
-                        temp_yaw += 2 * PI;
-                    }
-                    BaseChassis.PostureStatus.yaw = temp_yaw;
-                    BaseChassis.PostureStatus.x = -x;
-                    BaseChassis.PostureStatus.y = -y;
-                    Chassis_UpdatePostureStatus();
+//                     float x = VegaData_t.ActVal[3] / 1000;
+//                     float y = VegaData_t.ActVal[4] / 1000;
+//                     float yaw = VegaData_t.ActVal[0];
+//                     float temp_yaw = __ANGLE2RAD(yaw + 90);
+//                     if (temp_yaw < 0)
+//                     {
+//                         temp_yaw += 2 * PI;
+//                     }
+//                     BaseChassis.PostureStatus.yaw = temp_yaw;
+//                     BaseChassis.PostureStatus.x = -x;
+//                     BaseChassis.PostureStatus.y = -y;
+//                     Chassis_UpdatePostureStatus();
 
-                    DMA_RxOK_Flag_vega = 0;
-                    memset(DMAUSART_RX_BUF_vega, 0, 98);
-                    return;
-                }
-            }
-        }
-        DMA_RxOK_Flag_vega = 0;
-        memset(DMAUSART_RX_BUF_vega, 0, 98);
-    }
-}
+//                     DMA_RxOK_Flag_vega = 0;
+//                     memset(DMAUSART_RX_BUF_vega, 0, 98);
+//                     return;
+//                 }
+//             }
+//         }
+//         DMA_RxOK_Flag_vega = 0;
+//         memset(DMAUSART_RX_BUF_vega, 0, 98);
+//     }
+// }

@@ -32,15 +32,18 @@ extern "C"
 #define MAX_CMD_INFO_LENGTH 64
 #define MAX_CMD_LINE_LENGTH 128
 #define MAX_ARGC 12 //
-#define PRINT_BUFFER_SIZE 101
+#define PRINT_BUFFER_SIZE 128
 
 #ifdef SL_NRF_COMM
 #define DMA_BUFFER_SIZE (32 - NRF_PCK_HEADER_SIZE)
 #else
-#define DMA_BUFFER_SIZE 99
+#define DMA_BUFFER_SIZE 128
 #endif // SL_NRF_COMM
 
-    extern UART_HandleTypeDef CMD_UART;
+    /* cmd_huart允许simplelib其他组件访问, CMD_UART宏用于兼容旧版本 */
+    extern UART_HandleTypeDef *slib_cmd_huart;
+    #define CMD_UART    (*slib_cmd_huart)
+
     extern int DMA_RxOK_Flag;
     extern char cmd_line[MAX_CMD_LINE_LENGTH + 1];
     extern char *cmd_argv[MAX_ARGC];
