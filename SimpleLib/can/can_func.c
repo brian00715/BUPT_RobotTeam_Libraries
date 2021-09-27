@@ -17,11 +17,12 @@
 
 #include "can_func.h"
 #include "cmd.h"
+#include "can_utils.h"
 #include "utils.h"
 
 #ifdef SLIB_USE_CAN // 使能CAN
 
-uint32_t CAN_AcceptID_Std[8] = {324, 325, 0x281, 0x282, 204, 205, 206, 3211}; // 希望接收的ID，与回调函数ID对应
+uint32_t CAN_AcceptID_Std[8] = {324, 325, 0x281, 0x282, 204, 205, 206}; // 希望接收的ID，与回调函数ID对应
 
 /**
  * @brief 注册CAN回调函数
