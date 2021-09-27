@@ -45,10 +45,11 @@ void USART_DMA_Init(UART_HandleTypeDef *cmd_usart)
     slib_cmd_huart = cmd_usart;
     // 首次DMA接收，务必开启
     HAL_UART_Receive_DMA(slib_cmd_huart, (uint8_t *)&UART_RxBuffer_Raw, 99);
-    // TODO 分离ChassisLib和SimpleLib // HAL_UART_Receive_DMA(&Locator_UART, (uint8_t *)&UART_RxBuffer_Locator_Raw, 99); //开启DMA
+    // TODO 分离ChassisLib和SimpleLib
+    // HAL_UART_Receive_DMA(&Locator_UART, (uint8_t *)&UART_RxBuffer_Locator_Raw, 99);
     CMD_Init();
-    // TODO 分离ChassisLib和SimpleLib // 开启空闲中断
-    __HAL_UART_ENABLE_IT(slib_cmd_huart, UART_IT_IDLE);
+    // TODO 分离ChassisLib和SimpleLib
+    __HAL_UART_ENABLE_IT(slib_cmd_huart, UART_IT_IDLE); // 开启空闲中断
     // __HAL_UART_ENABLE_IT(&Locator_UART, UART_IT_IDLE);
 }
 
@@ -222,8 +223,8 @@ void uprintf(char *fmt, ...)
         HAL_Delay(1);
     // TODO:	ZeroVoid	due:10/7	优化输出，异步输出，可能纯在busy时再次调用，会被忽略，输出缺失
     // while(CMD_UART.hdmatx->State != HAL_DMA_STATE_READY);
-    // HAL_UART_Transmit(&CMD_UART, (uint8_t *)print_buffer, size, 0xffff);
-    HAL_UART_Transmit_DMA(slib_cmd_huart, (uint8_t *)print_buffer, size);
+    HAL_UART_Transmit(&CMD_UART, (uint8_t *)print_buffer, size, 0xffff);
+    // HAL_UART_Transmit_DMA(slib_cmd_huart, (uint8_t *)print_buffer, size);
 }
 
 void uprintf_to(UART_HandleTypeDef *huart, char *fmt, ...)

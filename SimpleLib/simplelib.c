@@ -58,8 +58,4 @@ void SimpleLib_Run(void)
         CAN_ExeCallback_Flag = 0;
     }
 #endif // SLIB_USE_CAN
-    if (send_wave_flag)
-    {
-        //HAL_Delay(10);
-    }
 }
