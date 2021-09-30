@@ -43,8 +43,8 @@ extern "C"
     //=================================函数声明=================================
 
     void Handle_Init();
-    void CAN_Callback_Handle_Button(CAN_ConnMessage_t *data);
-    void CAN_Callback_Handle_Rocker(CAN_ConnMessage_t *data);
+    void CAN_Callback_Handle_Button(CAN_ConnMessage_s *data);
+    void CAN_Callback_Handle_Rocker(CAN_ConnMessage_s *data);
     void Handle_Exe();
     void Handle_PrintRockerStatus();
     float Handle_RockerMapping(uint16_t amplitude, uint8_t max_amplitude, float max_val, float y0);

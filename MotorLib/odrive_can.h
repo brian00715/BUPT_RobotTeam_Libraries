@@ -153,7 +153,7 @@ extern ODrive_AxisGetState_t ODrive_CAN_RxBuff;
 /* 函数声明------------------------------------------------------------*/
 
 uint8_t ODrive_Init(ODrive_t *odrive);
-uint8_t CAN_Callback_ODriveAxis(ODriveAxis_t *axis, CAN_ConnMessage_t *msg);
+uint8_t CAN_Callback_ODriveAxis(ODriveAxis_t *axis, CAN_ConnMessage_s *msg);
 uint8_t ODrive_CANSendMsg(CAN_HandleTypeDef *hcan, ODrive_t *odrive, uint8_t axis, ODrive_CAN_CmdMsg_e msg);
 // void odrive_can_update_config(ODrive_Axis_e axis, float pos);
 // void odrive_can_enable_control(ODrive_Axis_e axis, ControlMode_t mode);

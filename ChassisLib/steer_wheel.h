@@ -2,7 +2,7 @@
 #define STEER_WHEEL_H_
 
 #include "base_chassis.h"
-#include "common_config.h"
+#include "chassis_common_config.h"
 #include "motor_driver.h"
 #ifdef USE_CHASSIS_RUDDER
 

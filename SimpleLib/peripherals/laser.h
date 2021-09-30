@@ -46,8 +46,8 @@ extern "C"
 
   extern LASER_ADC laser_adc[AVERAGE_AMOUNT];
 
-  extern PID_t laser_ypos_pid;
-  extern PID_t laser_xpos_pid;
+  extern PID_s laser_ypos_pid;
+  extern PID_s laser_xpos_pid;
 
   extern int Laser_PrintADCValue_Flag;
   extern int Laser_PrintPos_Flag;

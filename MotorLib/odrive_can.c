@@ -97,7 +97,7 @@ uint8_t ODrive_Init(ODrive_t *odrive)
  * @todo 利用C语言未知参数机制解决和simplelib不兼容的问题
  * @return uint8_t 
  */
-uint8_t CAN_Callback_ODriveAxis(ODriveAxis_t *axis, CAN_ConnMessage_t *msg)
+uint8_t CAN_Callback_ODriveAxis(ODriveAxis_t *axis, CAN_ConnMessage_s *msg)
 {
     uint8_t first_word[4];
     uint8_t second_word[4];

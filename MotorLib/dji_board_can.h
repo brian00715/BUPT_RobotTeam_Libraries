@@ -238,7 +238,7 @@ void ReadActualVel(CAN_TypeDef *CANx, uint8_t ElmoNum);
 */
 void ReadActualCur(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
-void CAN_Callback_DJI_ReadInfo(CAN_ConnMessage_t *data);
-void CAN_Callback_DJI_ReadAllPosInfo(CAN_ConnMessage_t *data);
+void CAN_Callback_DJI_ReadInfo(CAN_ConnMessage_s *data);
+void CAN_Callback_DJI_ReadAllPosInfo(CAN_ConnMessage_s *data);
 
 #endif

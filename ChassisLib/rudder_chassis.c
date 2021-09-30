@@ -7,6 +7,7 @@
  ******************************************************************/
 #include "rudder_chassis.h"
 #include "motor_driver.h"
+#include "vesc_can.h"
 
 #ifdef USE_CHASSIS_RUDDER
 #include <stdlib.h>
@@ -15,10 +16,10 @@
 //==========================================END=============================================
 
 //========================================public========================================
-RudderChassis_t RudderChassis; // 底盘全局结构体
+RudderChassis_s RudderChassis; // 底盘全局结构体
 
-extern PID_t NormalCorrPID_x, NormalCorrPID_y; //法向修正向量PD控制
-extern PID_t YawPID;                           //偏航角控制，ω=f(Δθ)
+extern PID_s NormalCorrPID_x, NormalCorrPID_y; //法向修正向量PD控制
+extern PID_s YawPID;                           //偏航角控制，ω=f(Δθ)
 //==========================================END=============================================
 
 /**
@@ -65,48 +66,46 @@ void RudderChassis_Exe()
     switch (RudderChassis.base->ctrl_mode)
     {
     case CTRL_MODE_NONE:
-        RudderChassis_Move(0, RudderChassis.base->target_dir, 0);
+        RudderChassis.base->target_speed = 0;
+        RudderChassis.base->target_omega = 0;
         break;
     case CTRL_MODE_HANDLE:
         Handle_Exe();
-        RudderChassis_Move(RudderChassis.base->target_speed,
-                           RudderChassis.base->target_dir,
-                           RudderChassis.base->target_omega); // 底层执行函数
         break;
     case CTRL_MODE_CMD:
+        RudderChassis.base->pos_mode = POS_MODE_RELATIVE;
         RudderChassis.base->target_speed = CMD_TargetSpeed;
         RudderChassis.base->target_dir = CMD_TargetDir;
         RudderChassis.base->target_omega = CMD_TargetOmega;
-        RudderChassis_Move(RudderChassis.base->target_speed,
-                           RudderChassis.base->target_dir,
-                           RudderChassis.base->target_omega); // 底层执行函数
         break;
     case CTRL_MODE_TRACK:
         RudderChassis.base->pos_mode = POS_MODE_ABSOLUTE;
-        Chassis_TrackPathSets(RudderChassis.base->TrackStatus.path_index);
+        Chassis_TrackPathSets(RudderChassis.base->TrackStatus.track_path_index);
         break;
     case CTRL_MODE_GO_TO_POINT:
-        Chassis_Go2Point(CMD_Chassis_TargetPoint, CMD_Chassis_TargetYaw);
-        RudderChassis_Move(RudderChassis.base->target_speed,
-                           RudderChassis.base->target_dir,
-                           RudderChassis.base->target_omega);
+        RudderChassis.base->pos_mode = POS_MODE_ABSOLUTE;
+        Chassis_Go2Point(RudderChassis.base->Go2PointStatus.target_point,
+                         RudderChassis.base->Go2PointStatus.target_yaw,
+                         RudderChassis.base->Go2PointStatus.start_speed,
+                         RudderChassis.base->Go2PointStatus.final_speed);
+
         break;
     case CTRL_MODE_TUNING:
         Chassis_YawTuning(CMD_TargetYaw);
-        RudderChassis_Move(RudderChassis.base->target_speed,
-                           RudderChassis.base->target_dir,
-                           RudderChassis.base->target_omega); // 底层执行函数
+        break;
+    case CTRL_MODE_EXTERNAL:
         break;
     default:
         break;
     }
+    RudderChassis_Move(RudderChassis.base->target_speed, RudderChassis.base->target_dir, RudderChassis.base->target_omega);
 }
 
 // 加入自转时速度分量的叠加量应乘以的系数{kx,ky}，对应轮子编号.
 static const int8_t omega_ratio[4][2] = {{-1, -1}, {-1, 1}, {1, 1}, {1, -1}};
 /**
  * @brief 底盘速度矢量映射为四个轮子的线速度与舵向角
- * @param speed 速度大小/rpm
+ * @param speed 速度大小/rpm 尽量传入非负数
  * @param dir 速度方向/rad
  * @param omega 自转角速度(rad/s)，逆时针为正方向
  * @note 控制方法为四个轮子同时转向，始终保持一个方向，并根据速度方向偏差转动每个单独轮以进行补偿
@@ -163,10 +162,12 @@ void RudderChassis_Move(float speed, float dir, float omega)
     SW_DriveMotors_LimitSpeed(target_speed);
 
     //向驱动板发送命令
+
     RudderChassis.SteerMotors.fSetPos(target_pos);
     if (RudderChassis.base->handbrake_flag)
     {
         RudderChassis.DriveMotors.fHandbrake(10.0);
+        uprintf("RudderChassis|sended handbrake command!\r\n");
     }
     else
     {
@@ -239,7 +240,7 @@ void RudderChassis_Rotate(float target_yaw)
     // float delta_angle = target_yaw - RudderChassis.PostureStatus->yaw;
     // delta_angle = AngleLimitPI(delta_angle);
     // target_yaw = RudderChassis.PostureStatus->yaw + delta_angle;
-    // float omega = PID_Release(&YawPID, target_yaw, RudderChassis.PostureStatus->yaw); // 暂时不加入角速度内环
+    // float omega = PID_GetOutput(&YawPID, target_yaw, RudderChassis.PostureStatus->yaw); // 暂时不加入角速度内环
     // float self_turn_vel = omega * RudderWheel2ChassisCenter / 2;                      // 自转切向速度
 
     // float target_speed[4] = {0};

@@ -10,14 +10,14 @@
 
 #include "nrf24l01.h"
 
-#ifdef SL_NRF
+#ifdef SLIB_USE_NRF
 #include <string.h>
 #include "assert.h"
 
-#ifdef SL_DEBUG
+#ifdef SLIB_USE_DEBUG
 #include "can_utils.h"
 #include "usart.h"
-#endif // SL_DEBUG
+#endif // SLIB_USE_DEBUG
 
 /*******************************************************************************
  * NRF Private Macro
@@ -67,9 +67,9 @@ uint8_t nrf_rx_addr[6][5];
 // NRF_AW nrf_addr_width;
 NRF_FLOW_STATE nrf_flow_state = NRF_IDLE;
 bool nrf_rx_addr_set[6] = {0};
-#ifdef SL_DEBUG
+#ifdef SLIB_USE_DEBUG
 CAN_Message_u msg;
-#endif // SL_DEBUG
+#endif // SLIB_USE_DEBUG
 
 /*******************************************************************************
  * NRF Private Val
@@ -152,7 +152,7 @@ void nrf_init(NRF_ConfigTypeDef *config) {
 
     _nrf_flush_all();
     _nrf_clear_irq();
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uprintf_("nrf init ok\r\n");
 	#endif
 }
@@ -173,11 +173,11 @@ uint8_t nrf_send_data(uint8_t *data, int len) {
     // uint8_t status;
 	uint8_t retval = 0;
 
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uprintf_("before send\r\n");
 	uint8_t conf = nrf_read_reg_byte(NRF_REG_CONFIG);
 	uprintf_("config %x\r\n", conf);
-	#endif // SL_DEBUG
+	#endif // SLIB_USE_DEBUG
 	_nrf_set_mode(NRF_PTX);
 	nrf_spi_delay();
 	_nrf_clear_irq();
@@ -202,10 +202,10 @@ uint8_t nrf_send_data(uint8_t *data, int len) {
     // {
 	// 	//HAL_Delay(20);
     //     status = _nrf_get_status();
-	// 	#ifdef SL_DEBUG
+	// 	#ifdef SLIB_USE_DEBUG
 	// 	conf = nrf_read_reg_byte(NRF_REG_CONFIG);
 	// 	uprintf_("status %x\r\nconfig %x\r\n", status, conf);
-	// 	#endif // SL_DEBUG
+	// 	#endif // SLIB_USE_DEBUG
     //     if (NRF_STATUS_GET_MAX_RT(status)) {
 	// 		_nrf_clear_maxrt_irq();
     //         retval = 1;
@@ -685,7 +685,7 @@ static uint8_t nrf_write_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	//NRF_SPI_Write(&cmd, 1);
     NRF_SPI_Write(data, len);
     nrf_spi_end();
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uint8_t temp[32];
 	uprintf_("write reg 0x%02x ", reg);
 	for(int i = 0; i<len; i++) {
@@ -693,7 +693,7 @@ static uint8_t nrf_write_reg(uint8_t reg, uint8_t *data, uint8_t len) {
 	}
 	uprintf_("\r\n");
 	nrf_read_reg(reg, temp, len);
-	#endif // SL_DEBUG
+	#endif // SLIB_USE_DEBUG
 	return 0;
 }
 
@@ -710,13 +710,13 @@ static void nrf_read_reg(uint8_t reg, uint8_t *data, uint8_t len) {
     NRF_SPI_Read(data, len);
     nrf_spi_end();
 
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uprintf_("read  reg 0x%02x ", reg);
 	for (int i=0; i<len; i++) {
 		uprintf_("0x%02x ", *(data+i));
 	}
 	uprintf_("\r\n");
-	#endif // SL_DEBUG
+	#endif // SLIB_USE_DEBUG
 
 }
 
@@ -738,9 +738,9 @@ static uint8_t nrf_test(void) {
 	if (memcmp(addr_test, addr_test_read, 3) != 0) {
 		return 1;
 	}
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uprintf_("nrf test ok\r\n");
-	#endif // SL_DEBUG
+	#endif // SLIB_USE_DEBUG
 	return 0;
 }
 
@@ -762,19 +762,19 @@ static void nrf_spi_delay(void) {
 }
 
 __weak void _nrf_receive_callback(uint8_t *data, int len) {
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uint8_t temp_data[10] = {0};
 	temp_data[8] = 0x01;
 	nrf_send_data(temp_data, 10);
-	#endif // SL_DEBUG
+	#endif // SLIB_USE_DEBUG
 }
 
 __weak void _nrf_send_callback(void) {
-	#ifdef SL_DEBUG
+	#ifdef SLIB_USE_DEBUG
 	uprintf_("send over\r\n");
-	#endif // SL_DEBUG
+	#endif // SLIB_USE_DEBUG
 }
 
 __weak void _nrf_max_rt_callback(void) {}
 
-#endif // SL_NRF
+#endif // SLIB_USE_NRF

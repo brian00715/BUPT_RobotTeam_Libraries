@@ -1,5 +1,5 @@
 #include "flash.h"
-#ifdef SL_FLASH
+#ifdef SLIB_USE_FLASH
 
 
 /**
@@ -110,4 +110,4 @@ float STMFLASH_ReadFloat(u32 faddr)
 {
     return *(float*)faddr;
 }
-#endif // SL_FLASH
+#endif // SLIB_USE_FLASH

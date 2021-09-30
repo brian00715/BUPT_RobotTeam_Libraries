@@ -10,17 +10,11 @@ extern "C"
 #include "cmd.h"
 #include "can_utils.h"
 #include "can_func.h"
-#include "flags.h"
-// #include "laser.h"
 #include "main.h"
-// #include "point_parser.h"
-// #include "motor_driver.h"
-// #include "vesc_can.h"
 #include <stdlib.h>
-// #include "dji_board_can.h"
 #include <string.h>
 
-void cmd_func_init(void);
+void CMD_FuncInit(void);
 
 
 #ifdef __cplusplus

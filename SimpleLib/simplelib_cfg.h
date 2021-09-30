@@ -3,8 +3,8 @@
  * File Name:		simplelib_config.h
  * Description:		SimpleLib: 兼容STM32CubeMX生成项目的组件Lib
  * Version:			0.1.1
- * Author:			ZeroVoid
- * Data:			2019/09/23 Mon 14:30
+ * Author:			ZeroVoid, Team 20th
+ * Data:			2021-09-27 
  * Encoding:        UTF-8
  *******************************************************************************/
 #ifndef __SIMPLELIB_CONFIG_H
@@ -19,41 +19,26 @@ extern "C"
  * @note	SL Simplelib or Stm32Lib
  * @note    VSCode comment shortcut: ctrl + /
  *******************************************************************************/
-// #define SL_OS                           // OS系统模块
-#define SL_CAN // CAN通信模块
-#define SL_CMD // 串口通信模块
-// #define SL_CMD_DMA                          // 串口通信DMA使用
-#define SL_USART_DMA // 串口DMA
-#define SL_FLASH     // Flash 模块
-//#define SL_NRF                          // NRF通信模块
-//#define SL_NRF_COMM                     // NRF 通信通信协议
-// #define SL_MOTOR_DRIVER					// 驱动卡模块
-#define SL_UTILS // 通用工具函封装
-// #define SL_IMI_SPI                      // 软件SPI封装
-// #define SL_AS5047P                      // AS5047P
-
-// #define SL_DEBUG                        // Simplelib debug macro
-#define SL_NRF_DEBUG //
-#define SL_COMP_V01  // 兼容V0.1版本
-
-/* Motor Driver Configuration -----------------------------------------------------*/
-#ifdef SL_MOTOR_DRIVER
-#define EN_MOTOR_DRIVER      // 使能HX 驱动卡
-#define EN_VESC_MOTOR_DRIVER // 使能Benjamin VESC驱动卡
-#endif                       // SL_MOTOR_DRIVER
-
-/* Command Configuration -----------------------------------------------------*/
-#ifdef SL_CMD_DMA
-#define CMD_MAX_LENGTH 100 // 指令最大长度
-#endif                     // SL_CMD_DMA
+#define SLIB_USE_CAN   // 使能CAN通信模块
+#define SLIB_USE_CMD   // 使能串口通信、串口命令行模块
+#define SLIB_USE_UTILS // 通用工具函封装
+#define SLIB_USE_UART_DMA
+// #define SLIB_USE_TOOLBOXSCOPE // 启用串口示波器
+// #define SLIB_USE_FLASH    // Flash 模块
+// #define SLIB_USE_NRF      // NRF通信模块
+// #define SLIB_USE_NRF_COMM // NRF 通信通信协议
+// #define SLIB_USE_IMI_SPI  // 软件SPI封装
+// #define SLIB_USE_AS5047P  // AS5047P
+// #define SLIB_USE_DEBUG    // Simplelib debug macro
+// #define SLIB_USE_NRF_DEBUG
 
 /* Flash Configuration -----------------------------------------------------*/
-#ifdef SL_FLASH
+#ifdef SLIB_USE_FLASH
 #define FLASH_SIZE 25 // Flash float数组大小
-#endif                // SL_FLASH
+#endif                // SLIB_USE_FLASH
 
 /* NRF Configuration -----------------------------------------------------*/
-#ifdef SL_NRF
+#ifdef SLIB_USE_NRF
 // #define SL_NRF_DMA                      // 使用DMA通信
 #include "gpio.h"
 #include "spi.h"
@@ -80,7 +65,7 @@ extern "C"
 #define NRF_SPI_CE_GPIO_PORT GPIOB
 #endif // STM32F407xx
 
-#endif // SL_NRF
+#endif // SLIB_USE_NRF
 
 #ifdef __cplusplus
 }

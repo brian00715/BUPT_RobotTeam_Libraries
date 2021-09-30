@@ -14,13 +14,8 @@ extern "C" {
 #endif
 
 #include <stdint.h>
-
-extern int CAN_ExeCallback_Flag;
-extern int DMA_RxOK_Flag;
 extern uint8_t _5ms;
 extern int send_wave_flag;
-extern uint8_t test_flag;
-extern uint8_t kick_test_flag;
 
 #ifdef __cplusplus
 }

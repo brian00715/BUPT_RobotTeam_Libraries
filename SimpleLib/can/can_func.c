@@ -17,11 +17,12 @@
 
 #include "can_func.h"
 #include "cmd.h"
+#include "can_utils.h"
 #include "utils.h"
 
-#ifdef SL_CAN // 使能CAN
+#ifdef SLIB_USE_CAN // 使能CAN
 
-uint32_t CAN_AcceptID_Std[8] = {324, 325, 0x281, 0x282, 204, 205, 206, 3211}; // 希望接收的ID，与回调函数ID对应
+uint32_t CAN_AcceptID_Std[8] = {324, 325, 0x281, 0x282, 204, 205, 206}; // 希望接收的ID，与回调函数ID对应
 
 /**
  * @brief 注册CAN回调函数
@@ -33,9 +34,9 @@ void CAN_FuncInit()
     // CAN_CallbackAdd(325, CAN_Callback_Handle_Button);
     // CAN_CallbackAdd(0x281, CAN_Callback_DJI_ReadInfo);
     // CAN_CallbackAdd(0x282, CAN_Callback_DJI_ReadAllPosInfo);
-    // CAN_CallbackAdd(204, CAN_Callback_Location_ReadPos_X);
-    // CAN_CallbackAdd(205, CAN_Callback_Location_ReadPos_Y);
-    // CAN_CallbackAdd(206, CAN_Callback_Location_ReadPos_Yaw);
+    // CAN_CallbackAdd(204, CAN_Callback_Locator_ReadPos_X);
+    // CAN_CallbackAdd(205, CAN_Callback_Locator_ReadPos_Y);
+    // CAN_CallbackAdd(206, CAN_Callback_Locator_ReadPos_Yaw);
 }
 
-#endif // SL_CAN
+#endif // SLIB_USE_CAN

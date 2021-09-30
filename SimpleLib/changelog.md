@@ -7,3 +7,9 @@
 - CAN相关
   - 添加CAN所有接收回调函数
 
+## Version 0.3.0
+
++ API重构
++ 代码精简
++ 修复了CAN的BUG和UART无法使用DMA发送的BUG
+

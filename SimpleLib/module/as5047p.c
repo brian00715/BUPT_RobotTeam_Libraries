@@ -1,6 +1,6 @@
 
 #include "as5047p.h"
-#ifdef SL_AS5047P
+#ifdef SLIB_USE_AS5047P
 
 #include "cmd.h"
 #include "imitate_spi.h"
@@ -148,4 +148,4 @@ void Show_Wheel_y() {
     uprintf("full_distance=%f\r\n", wheel_y.full_distance);
     uprintf("**************ywheel************\r\n");
 }
-#endif // SL_AS5047P
+#endif // SLIB_USE_AS5047P

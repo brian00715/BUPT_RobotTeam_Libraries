@@ -7,11 +7,11 @@
  * Data:			2019/11/08 Fri 21:06
  *******************************************************************************/
 #include "nrf_comm.h"
-#ifdef SL_NRF_COMM
+#ifdef SLIB_USE_NRF_COMM
 
-#ifdef SL_CMD
+#ifdef SLIB_USE_CMD
 #include "cmd.h"
-#endif // SL_CMD
+#endif // SLIB_USE_CMD
 
 #include <string.h>
 
@@ -69,9 +69,9 @@ void _nrf_comm_send(uint8_t *data, int len) {
 void _nrf_receive_callback(uint8_t *data, int len) {
     uint8_t tmp = (data[0] & 0x0F);
     if (tmp & NRF_UART) {
-        #ifdef SL_CMD
+        #ifdef SLIB_USE_CMD
         uprintf_to(&huart1, (char*)(nrf_rx_data + NRF_PCK_HEADER_SIZE));
-        #endif // SL_CMD
+        #endif // SLIB_USE_CMD
         nrf_uart_receive_callback(data + NRF_PCK_HEADER_SIZE, len - NRF_PCK_HEADER_SIZE);
     }
     if (tmp & NRF_CAN) {
@@ -81,9 +81,9 @@ void _nrf_receive_callback(uint8_t *data, int len) {
         nrf_comm_cmd(&nrf_handle);
         nrf_spi_receive_callback(data + NRF_PCK_HEADER_SIZE, len - NRF_PCK_HEADER_SIZE);
     }
-    #ifdef SL_NRF_DEBUG
+    #ifdef SLIB_USE_NRF_DEBUG
     HAL_GPIO_TogglePin(IND_LED_GPIO_Port, IND_LED_Pin);
-    #endif // SL_NRF_DEBUG
+    #endif // SLIB_USE_NRF_DEBUG
     nrf_receive_callback(nrf_handle.rx_data, nrf_handle.rx_len);
 }
 void nrf_comm_cmd(NRF_Handle *handle) {
@@ -100,16 +100,16 @@ void nrf_comm_cmd(NRF_Handle *handle) {
 }
 
 void _nrf_send_callback(void) {
-    #ifdef SL_NRF_DEBUG
+    #ifdef SLIB_USE_NRF_DEBUG
     HAL_GPIO_TogglePin(IND_LED_GPIO_Port, IND_LED_Pin);
-    #endif // SL_NRF_DEBUG
+    #endif // SLIB_USE_NRF_DEBUG
     nrf_send_callback(nrf_handle.tx_data, nrf_handle.tx_len);
 }
 
 void _nrf_max_rt_callback(void) {
     #ifdef SL_NRF_DEBUG_
     HAL_GPIO_TogglePin(IND_LED_GPIO_Port, IND_LED_Pin);
-    #endif // SL_NRF_DEBUG
+    #endif // SLIB_USE_NRF_DEBUG
     nrf_max_rt_callback(nrf_handle.tx_data, nrf_handle.tx_len);
 }
 
@@ -133,4 +133,4 @@ void _can_rx_nrf_callback(uint32_t *id, CAN_Message_u *data) {
 
 #endif // SL_NRF_HW_CAN
 
-#endif // SL_NRF_COMM
+#endif // SLIB_USE_NRF_COMM

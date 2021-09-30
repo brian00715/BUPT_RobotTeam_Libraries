@@ -53,8 +53,8 @@ extern "C"
 
   extern DJIMotor_t DJIMotor[4];
 
-  extern PID_t RM_Speed_PID[4];
-  extern PID_t RM_Position_PID[4];
+  extern PID_s RM_Speed_PID[4];
+  extern PID_s RM_Position_PID[4];
 
   /*Function Declare*/
   void can_robomaster_rcv_1(CAN_Message_u *pRxMsg);

@@ -19,47 +19,43 @@
  * @param   hcan        CAN通信句柄
  * @return	None
  */
-void simplelib_init(UART_HandleTypeDef *cmd_usart, CAN_HandleTypeDef *hcan)
+void SimpleLib_Init(UART_HandleTypeDef *cmd_usart, CAN_HandleTypeDef *hcan)
 {
-#ifdef SL_USART_DMA
+#ifdef SLIB_USE_UART_DMA
     if (cmd_usart != NULL)
     {
-        usart_DMA_init(cmd_usart);
+        USART_DMA_Init(cmd_usart);
     }
-#endif // SL_USART_DMA
+#endif // SLIB_USE_UART_DMA
 
-#ifdef SL_CMD
-    cmd_func_init();
+#ifdef SLIB_USE_CMD
+    CMD_FuncInit();
     uprintf("==simplelib init done==\r\n");
-#endif // SL_CMD
+#endif // SLIB_USE_CMD
 
-#ifdef SL_CAN
+#ifdef SLIB_USE_CAN
     if (hcan != NULL)
     {
         CAN_Init(hcan);
         CAN_FuncInit();
     }
-#endif // SL_CAN
+#endif // SLIB_USE_CAN
 }
 
-void simplelib_run(void)
+void SimpleLib_Run(void)
 {
-#ifdef SL_CMD
-    if (DMA_RxOK_Flag)
+#ifdef SLIB_USE_CMD
+    if (UART_DMA_RxOK_Flag)
     {
         USART_DMA_Exe();
-        DMA_RxOK_Flag = 0;
+        UART_DMA_RxOK_Flag = 0;
     }
-#endif // SL_CMD
-#ifdef SL_CAN
+#endif // SLIB_USE_CMD
+#ifdef SLIB_USE_CAN
     if (CAN_ExeCallback_Flag)
     {
         CAN_CallbackExe();
         CAN_ExeCallback_Flag = 0;
     }
-#endif // SL_CAN
-    if (send_wave_flag)
-    {
-        //HAL_Delay(10);
-    }
+#endif // SLIB_USE_CAN
 }

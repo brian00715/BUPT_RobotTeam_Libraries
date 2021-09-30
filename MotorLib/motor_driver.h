@@ -10,12 +10,6 @@
 
 #include "can_utils.h"
 #include "main.h"
-#include "vesc_can.h"
-#include "odrive_can.h"
-
-extern int VESC_StatusBag_Flag;
-extern int VESC_SwitchPrintInfo_Flag;
-extern int VESC_SwitchStopByAngle_Flag;
 
 typedef enum MTR_CTRL_MODE
 {
@@ -26,14 +20,14 @@ typedef enum MTR_CTRL_MODE
     MTR_CTRL_VOLTAGE // 电压模式和占空比模式差不多，取决于驱动器特性
 } MTR_CTRL_MODE;
 
-typedef struct CANSendFlag_t
+typedef struct CANSendFlag_s
 {
     unsigned m2006 : 1;
     unsigned vesc : 1;
     unsigned odrive : 1;
-} CANSendFlag_t; // 驱动器CAN消息发送标志位
+} CANSendFlag_s; // 驱动器CAN消息发送标志位
 
-typedef struct MotorDriver_t
+typedef struct MotorDriver_s
 {
     uint8_t can_id;        // can消息id
     uint8_t mode;          // 模式（速度环、电流环等）
@@ -45,11 +39,9 @@ typedef struct MotorDriver_t
     float now_current;
     float now_rpm;
     float now_position;
-} MotorDriver_t; // 电机驱动器抽象结构体
+} MotorDriver_s; // 电机驱动器抽象结构体
 
 void VESC_Exe();
-void RM2006_Exe();
-void CAN_Callback_VESC(MotorDriver_t *vesc, CAN_Message_u *data);
-void MotorDriver_Init(MotorDriver_t *motor_driver, uint8_t can_id, MTR_CTRL_MODE mode);
+void MotorDriver_Init(MotorDriver_s *motor_driver, uint8_t can_id, MTR_CTRL_MODE mode);
 
-#endif //_MOTOR_DRIVER_H
+#endif // __MOTOR_DRIVER_H

@@ -12,14 +12,16 @@
 #include "motor_driver.h"
 #include <math.h>
 #include "cmd.h"
+#include "vesc_can.h"
+#include "odrive_can.h"
 
-CANSendFlag_t CANSendFlag = {0};
+CANSendFlag_s CANSendFlag = {0};
 
 /**
  * @brief 电机驱动器基类初始化
  * 
  */
-void MotorDriver_Init(MotorDriver_t *motor_driver, uint8_t can_id, MTR_CTRL_MODE mode)
+void MotorDriver_Init(MotorDriver_s *motor_driver, uint8_t can_id, MTR_CTRL_MODE mode)
 {
   motor_driver->can_id = can_id;
   motor_driver->mode = mode;
@@ -41,7 +43,7 @@ void MotorDriver_Init(MotorDriver_t *motor_driver, uint8_t can_id, MTR_CTRL_MODE
  *        mode2 速度环
  *        mode3 位置环（通常不用）
  **/
-void VESC_Exe(MotorDriver_t *vesc)
+void VESC_Exe(MotorDriver_s *vesc)
 {
   if (CANSendFlag.vesc == 0)
   {
@@ -64,20 +66,7 @@ void VESC_Exe(MotorDriver_t *vesc)
   CANSendFlag.vesc = 0;
 }
 
-float MoterDriver_M2006_Current = 0;
-/**
- * @brief m2006大疆电机的执行函数
- **/
-void RM2006_Exe()
-{
-  if (CANSendFlag.m2006 == 0) // 控制5ms发一次
-    return;
-  // TODO: 状态机实现
-  CANSendFlag.m2006 = 0;
-}
-
-
-void MotorDriver_PrintInfo(MotorDriver_t *mtr)
+void MotorDriver_PrintInfo(MotorDriver_s *mtr)
 {
   if (VESC_SwitchPrintInfo_Flag)
   {
@@ -104,14 +93,4 @@ void MotorDriver_PrintInfo(MotorDriver_t *mtr)
   }
 }
 
-int VESC_StatusBag_Flag = 0;
-int VESC_SwitchPrintInfo_Flag = 0;
-/**
- * @brief 本杰明电调反馈状态包解析函数
- **/
-void CAN_Callback_VESC(MotorDriver_t *vesc, CAN_Message_u *data)
-{
-  int32_t index = 0;
-  vesc->now_position = buffer_get_int16(data->ui8, &index) / 50;
-  vesc->now_rpm = buffer_get_int32(data->ui8, &index);
-}
+

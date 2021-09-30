@@ -4,7 +4,7 @@
  extern "C" {
 #endif
 #include "simplelib_cfg.h"
-#ifdef SL_IMI_SPI
+#ifdef SLIB_USE_IMI_SPI
 
 #include <stdint.h>
 /*iSPI1*/
@@ -37,7 +37,7 @@
 void ispi1_write_read(uint8_t* writeBuffer, uint8_t* readBuffer, int len);  
 void ispi3_write_read(uint8_t* writeBuffer, uint8_t* readBuffer, int len);
    
-#endif // SL_IMI_SPI
+#endif // SLIB_USE_IMI_SPI
    
 #ifdef __cplusplus
 }
