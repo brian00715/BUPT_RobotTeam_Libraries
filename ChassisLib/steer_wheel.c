@@ -6,8 +6,9 @@
 #include "steer_wheel.h"
 #include "rudder_chassis.h"
 #include "odrive_can.h"
+#include "vesc_can.h"
 #ifdef USE_CHASSIS_RUDDER
-extern RudderChassis_t RudderChassis;
+extern RudderChassis_s RudderChassis;
 
 #ifdef DRIVE_MTR_USE_ODRIVE
 ODrive_t odrive[2];

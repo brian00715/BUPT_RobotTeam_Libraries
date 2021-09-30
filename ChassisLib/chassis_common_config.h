@@ -1,5 +1,5 @@
 /**
- * @file common_config.h
+ * @file chassis_common_config.h
  * @author simon
  * @brief 底盘参数配置
  * @version 0.1
@@ -8,15 +8,18 @@
  * @copyright Copyright (c) 2021
  * 
  */
-#ifndef COMMON_CONFIG_H_
-#define COMMON_CONFIG_H_
+#ifndef CHASSIS_COMMON_CONFIG_H_
+#define CHASSIS_COMMON_CONFIG_H_
 #include "gpio.h"
+#include "usart.h"
 #include "base_chassis.h"
+
+#define CHASSIS_MONITOR_UART (huart2) // 底盘轨迹监视uart
 
 // ===========================选择底盘类型===============================
 // #define USE_CHASSIS_OMNI
 #define USE_CHASSIS_RUDDER
-// #define USE_MECANUM_CHASSIS
+// #define USE_CHASSIS_MECANUM
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>横辊子全向轮参数<<<<<<<<<<<<<<<<<<<<<<<<<
 #ifdef USE_CHASSIS_OMNI
@@ -57,10 +60,10 @@
 #define STEER_WHEEL_MIN_POS (-29.32f)
 #define STEER_WHEEL_MAX_SPEED (1000) // 线数/ms
 #define STEER_WHEEL_MIN_SPEED (300)
-#define DRIVE_WHEEL_MAX_SPEED (3.0)  // 驱动轮最大线速度m/s
-#define DRIVE_WHEEL_MIN_SPEED (0.15) // 低于此速度无法驱动
-#define MAX_ROTATE_VEL (12)          // 最大自转角速度rad/s
-#define MIN_ROTATE_VEL (0.1)        // 高于此速度开始自转
+#define DRIVE_WHEEL_MAX_SPEED (3.0)   // 驱动轮最大线速度m/s
+#define DRIVE_WHEEL_MIN_SPEED (0.15)  // 低于此速度无法驱动
+#define MAX_ROTATE_VEL (12)           // 最大自转角速度rad/s
+#define MIN_ROTATE_VEL (0.1)          // 高于此速度开始自转
 #define MAX_HANDBRAKE_CURRENT (20.0f) // 驱动轮最大手刹电流
 //其他配置===========================
 #define RELAY_ACCESS GPIO_PIN_SET   // 继电器通
@@ -68,4 +71,4 @@
 #define SW_ARRIVE_CIRCIE (0.01)
 #endif //USE_CHASSIS_RUDDER
 
-#endif
+#endif // CHASSIS_COMMON_CONFIG_H_

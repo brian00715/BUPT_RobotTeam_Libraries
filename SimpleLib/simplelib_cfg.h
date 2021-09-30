@@ -23,6 +23,7 @@ extern "C"
 #define SLIB_USE_CMD   // 使能串口通信、串口命令行模块
 #define SLIB_USE_UTILS // 通用工具函封装
 #define SLIB_USE_UART_DMA
+// #define SLIB_USE_TOOLBOXSCOPE // 启用串口示波器
 // #define SLIB_USE_FLASH    // Flash 模块
 // #define SLIB_USE_NRF      // NRF通信模块
 // #define SLIB_USE_NRF_COMM // NRF 通信通信协议

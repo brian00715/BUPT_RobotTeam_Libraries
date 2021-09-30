@@ -12,6 +12,8 @@
 #include "motor_driver.h"
 #include <math.h>
 #include "cmd.h"
+#include "vesc_can.h"
+#include "odrive_can.h"
 
 CANSendFlag_s CANSendFlag = {0};
 

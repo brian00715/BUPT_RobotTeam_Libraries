@@ -26,6 +26,7 @@
 /* Includes ---------------------------------------------------*/
 #include <stdint.h>
 #include <stdbool.h>
+#include "motor_driver.h"
 
 /* Public Macro---------------------------------------------------*/
 //settings

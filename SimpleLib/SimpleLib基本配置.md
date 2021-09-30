@@ -1,8 +1,11 @@
+# SimpleLib基本配置
+Author: KY_Zhang
+Date: 2021-09-27
 [toc]
-
+---
 ## 1 STM32 CubeMX配置
 
-> ==注意==：以下配置均基于STM32 F407ZG
+> ==注意==：以下配置均基于STM32 F407ZG。如果不使用定时器，则请不要导入`/core/sys_func.c`和`sys_func.h`。
 
 ### 1.1 基本配置
 
@@ -99,7 +102,7 @@
       /* USER CODE BEGIN WHILE */
       while (1)
       {
-    		SimpleLib();
+    		SimpleLib_Run();
         /* USER CODE END WHILE */
     
         /* USER CODE BEGIN 3 */
@@ -144,6 +147,7 @@
   void CMD_FuncInit(void) 
   {
       CMD_Add("hello", "just", cmd_hello_func);
+      // 以下为自定义代码，配置时无需添加
       CMD_Add("ChangePosMode", "", CMD_ChangePosMode);
       CMD_Add("ChangeCtrlMode", "", CMD_ChangeCtrlMode);
   }
@@ -157,12 +161,17 @@
   ```c
   void CAN_FuncInit()
   {
+      // 以下为自定义代码，配置时无需添加
       CAN_CallbackAdd(324, CAN_Callback_Handle_Rocker);
       CAN_CallbackAdd(325, CAN_Callback_Handle_Button);
       CAN_CallbackAdd(0x281, CAN_Callback_DJI_ReadInfo);
       CAN_CallbackAdd(0x282, CAN_Callback_DJI_ReadAllPosInfo);
   }
   ```
-
+  
   
 
+## 3 其他配置
+
+1. 通过在`simplelib_cfg.h`中注释/取消注释相应的宏来启用/关闭一些功能。
+2. 如果要使用串口示波器，则需要在`/module/toolBoxScope.h`中修改**TOOLBOXSCOPE_UART**宏，对应希望配置的uart。

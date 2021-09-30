@@ -10,22 +10,21 @@
  */
 
 #include "base_chassis.h"
-#include "common_config.h"
+#include "chassis_common_config.h"
 #include "main.h"
-#include "cmd.h"
 #include "rudder_chassis.h"
 #include "omni_chassis.h"
-#include "../../User/toolBoxScope.h"
 #include "steer_wheel.h"
 
-#define ARRIVED_CIRCIE_TH 0.03 // m 到达半径阈值
-#define LOCK_CIRCLE_TH 0.2     // 启用原地锁定PID的距离半径阈值
+#define ARRIVED_CIRCIE_TH (0.007) // m 到达半径阈值
+#define LOCK_CIRCLE_TH (0.2)      // m 启用原地锁定PID的距离半径阈值
 
-BaseChassis_t BaseChassis; // 基类对象，子类继承时引用其指针
+BaseChassis_s BaseChassis; // 基类对象，子类继承时引用其指针
 float CMD_TargetSpeed = 0;
 float CMD_TargetDir = 0;
-float CMD_TargetOmega = 1.5708;
-float CMD_TargetYaw = 0;
+float CMD_TargetOmega = 0;
+float CMD_TargetYaw = 1.5708;
+
 char YawTuning_Start;
 
 /* PID结构体,请根据所使用的底盘实际调试-----------------------------*/
@@ -34,7 +33,7 @@ PID_s NormalCorrPID_y = {0};
 PID_s Chassis_SpeedCtrlPID = {0};
 PID_s Chassis_OmegaCtrlPID = {0};
 PID_s YawPID = {0};
-PID_s LockPID = {0}; // 跑点模式
+PID_s LockPID = {0}; // 跑点模式锁止PID
 
 static float location_raw_x, location_raw_y,
     location_raw_speed_x, location_raw_speed_y;
@@ -45,40 +44,65 @@ static float location_raw_x, location_raw_y,
 void BaseChassis_Init()
 {
     //BaseChassis.fChassisMove在子类的初始化函数中关联
-    BaseChassis.fChassisMove = NULL;
     Chassis_PostureStatusInit();
-    Chassis_TrackStatusInit();
+    BaseChassis.fChassisMove = NULL;
     BaseChassis.ctrl_mode = CTRL_MODE_NONE;
     BaseChassis.pos_mode = POS_MODE_RELATIVE;
     BaseChassis.handbrake_flag = 0;
+    BaseChassis.lock_yaw_flag = 0;
+    BaseChassis.target_yaw = 1.5708;
+    BaseChassis.target_omega = 0;
+    BaseChassis.target_speed = 0;
+    BaseChassis.target_dir = 0;
+    BaseChassis.yaw_ctrl_th = 0.01745; // 1°的死区
 
-    NormalCorrPID_x.Kp = 0.01;
+    BaseChassis.TrackStatus.track_path_index = 0;
+    BaseChassis.TrackStatus.point_index = -1;
+    BaseChassis.TrackStatus.finished = 0;
+    BaseChassis.TrackStatus.start = 0;
+    BaseChassis.Go2PointStatus.points_set_index = -1;
+    BaseChassis.Go2PointStatus.enable_always_yaw_ctrl = 1;
+    BaseChassis.Go2PointStatus.start = 0;
+    BaseChassis.Go2PointStatus.enable = 0;
+    BaseChassis.Go2PointStatus.arrived = 0;
+    BaseChassis.Go2PointStatus.start_speed = 0;
+    BaseChassis.Go2PointStatus.final_speed = 0;
+    BaseChassis.Go2PointStatus.disable_yaw_ctrl = 0;
+    BaseChassis.Go2PointStatus.target_yaw = 1.5708;
+    BaseChassis.Go2PointStatus.target_point.x = 0;
+    BaseChassis.Go2PointStatus.target_point.y = 0;
+    BaseChassis.Go2PointStatus.start_point.x = 0;
+    BaseChassis.Go2PointStatus.start_point.y = 0;
+    BaseChassis.Go2PointStatus.min_speed = 0;
+    BaseChassis.Go2PointStatus.max_speed = DRIVE_WHEEL_MAX_SPEED;
+
+    NormalCorrPID_x.Kp = 0.2;
     NormalCorrPID_x.Ki = 0;
     NormalCorrPID_x.Kd = 0.000;
     NormalCorrPID_x.int_max = 10;
     NormalCorrPID_x.int_duty = 1.0;
-    NormalCorrPID_x.ctrl_max = 99;
+    NormalCorrPID_x.ctrl_max = 10;
 
-    NormalCorrPID_y.Kp = 0.01;
+    NormalCorrPID_y.Kp = 0.2;
     NormalCorrPID_y.Ki = 0;
     NormalCorrPID_y.Kd = 0.000;
     NormalCorrPID_y.int_max = 10;
     NormalCorrPID_y.int_duty = 1.0;
-    NormalCorrPID_y.ctrl_max = 99;
+    NormalCorrPID_y.ctrl_max = 10;
 
-    YawPID.Kp = 0.00;
+    YawPID.Kp = 5.00;
     YawPID.Ki = 0.00;
     YawPID.Kd = 0.0;
     YawPID.int_max = 10;
-    YawPID.int_duty = 5.0;
+    YawPID.int_duty = 10.0;
     YawPID.ctrl_max = 5.0;
 
-    LockPID.Kp = 1;
-    LockPID.Ki = 0.01;
-    LockPID.Kd = 0.00;
-    LockPID.int_max = 10;
+    LockPID.Kp = 0.7;
+    LockPID.Ki = 0.00;
+    LockPID.Kd = 0.35;
+    LockPID.int_max = 1.0;
     LockPID.int_duty = 5.0;
-    LockPID.ctrl_max = 5.0;
+    LockPID.ctrl_max = 1.0;
 
     Chassis_SpeedCtrlPID.Kp = 1.5;
     Chassis_SpeedCtrlPID.Ki = 0.01;
@@ -107,22 +131,16 @@ void Chassis_PostureStatusInit()
     BaseChassis.PostureStatus.last_x = 0;
     BaseChassis.PostureStatus.last_y = 0;
     BaseChassis.PostureStatus.last_yaw = 0;
+    BaseChassis.PostureStatus.pos_corr_x = 0;
+    BaseChassis.PostureStatus.pos_corr_y = 0;
     BaseChassis.target_dir = 0;
     BaseChassis.target_speed = 0;
     BaseChassis.target_omega = 0;
 }
 
-void Chassis_TrackStatusInit()
-{
-    BaseChassis.TrackStatus.path_index = 0;
-    BaseChassis.TrackStatus.point_index = -1;
-    BaseChassis.TrackStatus.points_set_index = -1;
-    BaseChassis.TrackStatus.go2point_start = 0;
-}
-
 /** 
-  * @brief 更新底盘位姿状态
-  * @note  此函数调用频率与里程计坐标发布频率挂钩
+  * @brief 由用户实现 | 更新底盘位姿状态
+  * @note  此函数调用频率不应低于里程计坐标发布频率
   */
 void Chassis_UpdatePostureStatus()
 {
@@ -144,12 +162,19 @@ void Chassis_UpdatePostureStatus()
         location_raw_x * cos(__ANGLE2RAD(45)) -
         location_raw_y * cos(__ANGLE2RAD(45));
 
+    float tmp = BaseChassis.PostureStatus.y;
+    BaseChassis.PostureStatus.y = BaseChassis.PostureStatus.x + BaseChassis.PostureStatus.pos_corr_y;
+    BaseChassis.PostureStatus.x = -tmp + BaseChassis.PostureStatus.pos_corr_x;
+
     BaseChassis.PostureStatus.speed_x =
         -location_raw_speed_x * cos(__ANGLE2RAD(45)) -
         location_raw_speed_y * cos(__ANGLE2RAD(45));
     BaseChassis.PostureStatus.speed_y =
         -location_raw_speed_x * cos(__ANGLE2RAD(45)) +
         location_raw_speed_y * cos(__ANGLE2RAD(45));
+    tmp = BaseChassis.PostureStatus.speed_y;
+    BaseChassis.PostureStatus.speed_y = BaseChassis.PostureStatus.speed_x;
+    BaseChassis.PostureStatus.speed_x = tmp;
 }
 
 /**
@@ -166,8 +191,7 @@ void Chassis_MotionCtrl(void)
                            BaseChassis.PostureStatus.speed_y * BaseChassis.PostureStatus.speed_y);
     float now_omega = BaseChassis.PostureStatus.omega;
     BaseChassis.speed_ctrl = PID_GetOutput(&Chassis_SpeedCtrlPID, BaseChassis.target_speed, now_speed);
-    // BaseChassis.omega_ctrl = PID_GetOutput(&Chassis_OmegaCtrlPID, BaseChassis.target_omega, now_omega);
-    BaseChassis.omega_ctrl += PID_GetIncrementOutput(&Chassis_OmegaCtrlPID, BaseChassis.target_omega, now_omega);
+    BaseChassis.omega_ctrl = PID_GetOutput(&Chassis_OmegaCtrlPID, BaseChassis.target_omega, now_omega);
     if (fabs(BaseChassis.target_omega) < 0.1) // 死区
     {
         BaseChassis.omega_ctrl = 0;
@@ -195,96 +219,110 @@ void Chassis_TrackPoints(int index)
     {
         CMD_Chassis_TargetPoint.x = 0;
         CMD_Chassis_TargetPoint.y = 0;
-        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708);
+        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708, 0.2, 0);
         break;
     }
     case 2:
         CMD_Chassis_TargetPoint.x = 0.5;
         CMD_Chassis_TargetPoint.y = 0.5;
-        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708);
+        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708, 0.2, 0);
         break;
     case 3:
         CMD_Chassis_TargetPoint.x = -0.5;
         CMD_Chassis_TargetPoint.y = 0.5;
-        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708);
+        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708, 0.2, 0);
         break;
     case 4:
         CMD_Chassis_TargetPoint.x = -0.5;
         CMD_Chassis_TargetPoint.y = -0.5;
-        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708);
+        Chassis_Go2Point(CMD_Chassis_TargetPoint, 1.5708, 0.2, 0);
         break;
     default:
         break;
     }
 }
 
-void Chassis_Go2Point(Point2D_s target, float target_yaw)
+void Chassis_Go2Point(Point2D_s target, float target_yaw, float start_spd, float end_spd)
 {
-    if (BaseChassis.fChassisMove == NULL)
+    if (!BaseChassis.Go2PointStatus.enable)
     {
-        uprintf("## Error! fChassisMove is NULL ##\r\n");
         return;
     }
-    static Point2D_s start;
-    if (BaseChassis.TrackStatus.go2point_start == 1) // 保存起点
+
+    if (BaseChassis.Go2PointStatus.start == 1) // 保存起点
     {
-        start.x = BaseChassis.PostureStatus.x;
-        start.y = BaseChassis.PostureStatus.y;
-        BaseChassis.TrackStatus.go2point_start = 0;
+        BaseChassis.Go2PointStatus.start = 0;
+        BaseChassis.Go2PointStatus.start_point.x = BaseChassis.PostureStatus.x;
+        BaseChassis.Go2PointStatus.start_point.y = BaseChassis.PostureStatus.y;
+        BaseChassis.Go2PointStatus.arrived = 0;
     }
 
-    static int arrived_flag = 0;
     float distance = sqrt(pow(BaseChassis.PostureStatus.x - target.x, 2) +
                           pow(BaseChassis.PostureStatus.y - target.y, 2));
-    // if (arrived_flag && distance < ARRIVED_CIRCIE_TH)
-    //     return;
 
-    // 换算偏差量为[0,pi]
+    // 换算偏差量限制到[0,pi]
     float now_yaw = BaseChassis.PostureStatus.yaw;
     float delta_angle = target_yaw - now_yaw;
     delta_angle = AngleLimitPI(delta_angle);
     target_yaw = now_yaw + delta_angle;
 
+    float tmp_speed = 0, tmp_omega = 0;
     if (distance >= LOCK_CIRCLE_TH)
     {
-        arrived_flag = 0;
-        BaseChassis.target_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
-        // BaseChassis.target_omega = 0;
+
+        BaseChassis.Go2PointStatus.arrived = 0;
+        if (BaseChassis.Go2PointStatus.enable_always_yaw_ctrl)
+        {
+            tmp_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
+        }
+        else
+        {
+            tmp_omega = 0;
+        }
         BaseChassis.target_dir = AngleBetweenPoints(BaseChassis.PostureStatus.x,
                                                     BaseChassis.PostureStatus.y, target.x, target.y);
-        BaseChassis.target_speed = Chassis_Plan2PointSpeed(start, target, 0.15, 0, 0.3, 0.4);
+        tmp_speed = Chassis_Plan2PointSpeed(BaseChassis.Go2PointStatus.start_point, target, start_spd, end_spd, 0.4, 0.4);
+        __LIMIT_FROM_TO(tmp_speed, BaseChassis.Go2PointStatus.min_speed, BaseChassis.Go2PointStatus.max_speed);
         // BaseChassis.handbrake_flag = 0;
-        if (TimeFlag_50ms)
-        {
-            uprintf("distance> lock_th spd:%6.3f\r\n", BaseChassis.target_speed);
-        }
+        // if (TimeFlag_50ms)
+        // {
+        //     uprintf("distance:%7.3f spd:%6.3f\r\n", distance, tmp_speed);
+        // }
     }
     else
     {
         if (distance >= ARRIVED_CIRCIE_TH)
         {
-            BaseChassis.target_speed = fabs(PID_GetOutput(&LockPID, 0, distance));
-            BaseChassis.target_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
-            // BaseChassis.target_omega = 0;
-            // if (BaseChassis.target_speed < 0.11) // 低于此期望速度无法运动
-            // {
-            //     BaseChassis.target_speed = 0.11;
-            // }
+            BaseChassis.Go2PointStatus.arrived = 0;
+            tmp_speed = fabs(PID_GetOutput(&LockPID, 0, distance));
+            __LIMIT_FROM_TO(tmp_speed, BaseChassis.Go2PointStatus.min_speed, BaseChassis.Go2PointStatus.max_speed);
+
+            tmp_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
             BaseChassis.target_dir = AngleBetweenPoints(BaseChassis.PostureStatus.x,
                                                         BaseChassis.PostureStatus.y, target.x, target.y);
-            uprintf("pid spd:%6.3f\r\n", BaseChassis.target_speed);
+            // uprintf("Go2Point|pid circle, spd:%6.3f\r\n", tmp_speed);
         }
-        else
+        else // 到达
         {
-            arrived_flag = 1;
-            uprintf("arrived at %f,%f,%f\r\n", BaseChassis.PostureStatus.x,
-                    BaseChassis.PostureStatus.y, BaseChassis.PostureStatus.yaw);
-            BaseChassis.target_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
-            // BaseChassis.target_omega = 0;
-            BaseChassis.target_speed = 0;
+            BaseChassis.Go2PointStatus.arrived = 1;
+            // BaseChassis.Go2PointStatus.enable = 0; 到达后希望一直锁定，则不失能
+            // uprintf("arrived at %f,%f,%f\r\n", BaseChassis.PostureStatus.x,
+            //         BaseChassis.PostureStatus.y, BaseChassis.PostureStatus.yaw);
+            tmp_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
+            tmp_speed = 0;
             // BaseChassis.handbrake_flag = 1;
         }
     }
+    BaseChassis.target_speed = tmp_speed;
+    if (fabs(delta_angle) < BaseChassis.yaw_ctrl_th)
+    {
+        tmp_omega = 0;
+    }
+    if (BaseChassis.Go2PointStatus.disable_yaw_ctrl)
+    {
+        tmp_omega = 0;
+    }
+    BaseChassis.target_omega = tmp_omega;
     return;
 }
 
@@ -305,17 +343,30 @@ float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
                               float start_speed, float final_speed,
                               float acc_ratio, float dec_ratio)
 {
+    if (final_speed > start_speed && acc_ratio < 0.05)
+    {
+        uprintf("## Error! final_speed>start_speed and acc_ratio is too low! ##\r\n");
+        return 0;
+    }
     float distance_to_target = sqrtf(pow((target.x - BaseChassis.PostureStatus.x), 2) +
                                      pow((target.y - BaseChassis.PostureStatus.y), 2));
     float total_distance = sqrtf(pow((target.x - start.x), 2) + pow((target.y - start.y), 2));
     float distance_offset = fabs(total_distance - distance_to_target); //与起点的距离
     float speed = 0;
-    float max_speed = 0.6 * total_distance; // 根据距离缩放速度
-    __LIMIT(max_speed, DRIVE_WHEEL_MAX_SPEED);
-
-    if (distance_offset <= total_distance * acc_ratio) // 加速过程
+    float max_speed = 0.45 * total_distance; // 根据距离缩放速度 0.6 太快
+    if (acc_ratio < 1e-4)                    // 纯减速过程
     {
-        speed = ((max_speed - start_speed) / (acc_ratio * total_distance)) * distance_offset + start_speed;
+        max_speed = start_speed;
+    }
+    else if (dec_ratio < 1e-4) // 纯加速过程
+    {
+        max_speed = final_speed;
+    }
+
+    if (distance_offset <= total_distance * acc_ratio && acc_ratio > 1e-4) // 加速过程
+    {
+        float k = (max_speed - start_speed) / (acc_ratio * total_distance);
+        speed = k * distance_offset + start_speed;
     }
     else if (distance_offset <= total_distance * (1 - dec_ratio)) // 匀速过程
     {
@@ -323,18 +374,35 @@ float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
     }
     else if (distance_offset <= total_distance) //减速过程
     {
-        speed = -((max_speed - final_speed) / (dec_ratio * total_distance)) *
-                    (dec_ratio * total_distance - (total_distance - distance_offset)) +
-                final_speed + max_speed;
+        float k = -((max_speed - final_speed) / (dec_ratio * total_distance));
+        float x = dec_ratio * total_distance - (total_distance - distance_offset);
+        float b = final_speed - k * dec_ratio * total_distance;
+        speed = k * x + b;
     }
-
-    __LIMIT_FROM_TO(speed, 0, max_speed);
     // uprintf("speed:%.2f distance_to_target:%.2f distance_offset:%.2f\r\n", speed, distance_to_target, distance_offset);
     return speed;
 }
 
+void Chassis_Go2Point_Reset()
+{
+    BaseChassis.Go2PointStatus.start = 0;
+    BaseChassis.Go2PointStatus.enable = 0;
+    BaseChassis.Go2PointStatus.arrived = 0;
+    BaseChassis.Go2PointStatus.start_speed = 0.01;
+    BaseChassis.Go2PointStatus.final_speed = 0;
+    BaseChassis.Go2PointStatus.disable_yaw_ctrl = 0;
+    BaseChassis.Go2PointStatus.enable_always_yaw_ctrl = 1;
+    BaseChassis.Go2PointStatus.max_speed = DRIVE_WHEEL_MAX_SPEED;
+    BaseChassis.Go2PointStatus.min_speed = DRIVE_WHEEL_MIN_SPEED;
+    YawPID.ctrl_max = 5.0;
+    BaseChassis.ctrl_mode = CTRL_MODE_NONE;
+    BaseChassis.target_speed = 0;
+    //速度方向不应更改
+    BaseChassis.target_omega = 0;
+}
+
 /**
- * @brief 底盘中层驱动(跟踪向量)
+ * @brief 底盘轨迹跟踪中层：计算法向修正向量
  * @param now_speed_vec 当前速度
  * @param target_speed_vec 目标速度
  * @param distance_vec 位移向量
@@ -354,7 +422,7 @@ void Chassis_TrackVector(vec now_speed_vec, vec target_speed_vec,
         vec project_vec = Vec_ScalarMul(now_pos2next_target, project / Vec_Model(now_pos2next_target));            // 投影向量
         vec corr_vec = Vec_Add(distance_vec, project_vec);                                                         // 法向修正向量
         Vec_ScalarMul(corr_vec, 1.0);                                                                              // 使距离修正与速度大小相关联
-        // 对法向修正向量进行控制
+        // 对法向偏差进行控制
         float corr_vec_ctrl_x = -PID_GetOutput(&NormalCorrPID_x, 0, corr_vec.x); // 需要使用两个PID结构体，否则last变量会被重用
         float corr_vec_ctrl_y = -PID_GetOutput(&NormalCorrPID_y, 0, corr_vec.y);
         vec corr_vec_ctrl = Vec_Create(corr_vec_ctrl_x, corr_vec_ctrl_y);
@@ -363,15 +431,14 @@ void Chassis_TrackVector(vec now_speed_vec, vec target_speed_vec,
         float delta_angle = target_yaw - BaseChassis.PostureStatus.yaw;
         delta_angle = AngleLimitPI(delta_angle);
         target_yaw = BaseChassis.PostureStatus.yaw + delta_angle;
-        // target_yaw = __ANGLE2RAD(90);
-        float omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw); // 暂时不加入角速度内环
+        float omega_ctrl = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw); // 暂时不加入角速度内环
 
         // 设置全局目标，交给ChassisMove函数执行
         float speed_out = (float)Vec_Model(velocity_out);
-        __LIMIT_FROM_TO(speed_out, 0.25, DRIVE_WHEEL_MAX_SPEED);
+        __LIMIT_FROM_TO(speed_out, 0.01, DRIVE_WHEEL_MAX_SPEED);
         BaseChassis.target_speed = speed_out;
         BaseChassis.target_dir = atan2(velocity_out.y, velocity_out.x);
-        BaseChassis.target_omega = omega;
+        BaseChassis.target_omega = omega_ctrl;
         if (TimeFlag_20ms)
         {
             // >>>观测速度<<<
@@ -395,90 +462,129 @@ static vec now_pos2now_target;     // 底盘当前坐标到当前目标点的位
 static vec now_pos2next_target;    // 底盘到下一个目标点的位移向量
 static vec now_target2last_target; // 当前目标点到上一个目标点的向量
 /**
- * @brief 跟踪单个点集
+ * @brief 跟踪轨迹点集
  * @param point_sets 点集数组
  * @param point_num 点的个数
  */
 int Chassis_TrackPath(const PlanPoint point_sets[], unsigned int point_num)
 {
     // 首次进入
-    if (BaseChassis.TrackStatus.begin_track == 1)
+    if (BaseChassis.TrackStatus.start == 1)
     {
-        BaseChassis.TrackStatus.begin_track = 0;
+        BaseChassis.TrackStatus.start = 0;
         BaseChassis.TrackStatus.point_index = 1; // 使now_pos2next_target为非零值
-        uprintf_to(&huart2, "START\r\n");
+        uprintf_to(&CHASSIS_MONITOR_UART, "START\r\n");
     }
 
-    if (BaseChassis.TrackStatus.finished_track) // 轨迹跑完了
+    if (BaseChassis.TrackStatus.finished) // 轨迹跑完了
     {
         BaseChassis.target_speed = 0;
         BaseChassis.target_omega = 0;
         // Rotate(point_sets[point_num - 1].target_angle); // 进行偏航角微调
         return 1;
     }
-    else
-    {
-        BaseChassis.fChassisMove(BaseChassis.target_speed, BaseChassis.target_dir, BaseChassis.target_omega);
-    }
 
     now_speed_vec = Vec_Create(BaseChassis.PostureStatus.speed_x, BaseChassis.PostureStatus.speed_y);
     // 包含轨迹点速度在x，y的分量
-    target_speed_vec = Vec_Create((float)point_sets[BaseChassis.TrackStatus.point_index].speed * cos(point_sets[BaseChassis.TrackStatus.point_index].direct),
-                                  (float)point_sets[BaseChassis.TrackStatus.point_index].speed * sin(point_sets[BaseChassis.TrackStatus.point_index].direct));
+    target_speed_vec = Vec_Create((float)point_sets[BaseChassis.TrackStatus.point_index].speed *
+                                      cos(point_sets[BaseChassis.TrackStatus.point_index].direct),
+                                  (float)point_sets[BaseChassis.TrackStatus.point_index].speed *
+                                      sin(point_sets[BaseChassis.TrackStatus.point_index].direct));
     now_pos2now_target = Vec_Create(point_sets[BaseChassis.TrackStatus.point_index].x - BaseChassis.PostureStatus.x,
                                     point_sets[BaseChassis.TrackStatus.point_index].y - BaseChassis.PostureStatus.y);
     now_target2last_target = Vec_Create(point_sets[BaseChassis.TrackStatus.point_index + 1].x - BaseChassis.PostureStatus.x,
                                         point_sets[BaseChassis.TrackStatus.point_index + 1].y - BaseChassis.PostureStatus.y);
     // >>> 注意！这里要求point_index > 0 <<<
-    now_pos2next_target = Vec_Create(point_sets[BaseChassis.TrackStatus.point_index - 1].x - point_sets[BaseChassis.TrackStatus.point_index].x,
-                                     point_sets[BaseChassis.TrackStatus.point_index - 1].y - point_sets[BaseChassis.TrackStatus.point_index].y);
+    now_pos2next_target = Vec_Create(point_sets[BaseChassis.TrackStatus.point_index - 1].x -
+                                         point_sets[BaseChassis.TrackStatus.point_index].x,
+                                     point_sets[BaseChassis.TrackStatus.point_index - 1].y -
+                                         point_sets[BaseChassis.TrackStatus.point_index].y);
     double distance_to_next = Vec_Model(now_pos2now_target);
 
     if (TimeFlag_50ms)
     {
         // 通过串口向PC发送轨迹点，用python读取串口信息并绘图
-        uprintf_to(&huart2, "track: %.2f %.2f %.2f %.2f\r\n", BaseChassis.PostureStatus.x, BaseChassis.PostureStatus.y,
-                   point_sets[BaseChassis.TrackStatus.point_index].x, point_sets[BaseChassis.TrackStatus.point_index].y);
+        uprintf_to(&CHASSIS_MONITOR_UART, "track: %.2f %.2f %.2f %.2f\r\n",
+                   BaseChassis.PostureStatus.x, BaseChassis.PostureStatus.y,
+                   point_sets[BaseChassis.TrackStatus.point_index].x,
+                   point_sets[BaseChassis.TrackStatus.point_index].y);
 
-        uprintf("[%d] (%.3f,%.3f)->(%.3f,%.3f) tar_spe:%.2f tar_dir:%.2f\r\n", BaseChassis.TrackStatus.point_index,
+        uprintf("[%d] (%.3f,%.3f)->(%.3f,%.3f) tar_spe:%.2f tar_dir:%.2f\r\n",
+                BaseChassis.TrackStatus.point_index,
                 BaseChassis.PostureStatus.x, BaseChassis.PostureStatus.y,
                 point_sets[BaseChassis.TrackStatus.point_index].x,
                 point_sets[BaseChassis.TrackStatus.point_index].y,
                 BaseChassis.target_speed, __RAD2ANGLE(BaseChassis.target_dir));
     }
     // 判断是否经过当前目标点
-    vec forehead = Vec_Create(cos(BaseChassis.target_dir), sin(BaseChassis.target_dir)); // 当前期望速度方向向量
-    if (Vec_DotProduct(now_pos2now_target, now_target2last_target) < 0 ||
-        Vec_DotProduct(forehead, now_pos2now_target) < 0 || // 经测试，不用距离阈值判断也可以
-        distance_to_next <= 0.05)
+    if (BaseChassis.TrackStatus.point_index < point_num - 1)
     {
-        BaseChassis.TrackStatus.point_index++; // 指向下一个点
+        vec forehead = Vec_Create(cos(BaseChassis.target_dir), sin(BaseChassis.target_dir)); // 当前期望速度方向向量
+        if (Vec_DotProduct(now_pos2now_target, now_target2last_target) < 0 ||
+            Vec_DotProduct(forehead, now_pos2now_target) < 0 || // 经测试，不用距离阈值判断也可以
+            distance_to_next <= 0.05)
+        {
+            BaseChassis.TrackStatus.point_index++;                                  // 指向下一个点
+            BaseChassis.Go2PointStatus.start_point.x = BaseChassis.PostureStatus.x; // 除了倒数3个点，这两行赋值应是无效的
+            BaseChassis.Go2PointStatus.start_point.y = BaseChassis.PostureStatus.y;
+            BaseChassis.Go2PointStatus.enable = 0;
+        }
+    }
+    else // 最后一个点的经过逻辑不同
+    {
+        if (BaseChassis.Go2PointStatus.arrived)
+        {
+            BaseChassis.TrackStatus.point_index++;
+        }
     }
 
     if (BaseChassis.TrackStatus.point_index < point_num - 3) // 正常跑点逻辑
     {
         Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
-                            point_sets[BaseChassis.TrackStatus.point_index].target_angle); //point_sets[BaseChassis.track_status.point_index].target_angle + 1.57
+                            point_sets[BaseChassis.TrackStatus.point_index].target_angle);
     }
     else if (BaseChassis.TrackStatus.point_index == point_num - 3) // 倒数第三个点
     {
         Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
                             point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+
+        // BaseChassis.Go2PointStatus.start = 0; // 避免一直更新起点
+        // BaseChassis.Go2PointStatus.enable = 1;
+        // Point2D_s tar;
+        // tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
+        // tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
+        // Chassis_Go2Point(tar, point_sets[BaseChassis.TrackStatus.point_index].target_angle,
+        //                  0.5, 0.4);
     }
     else if (BaseChassis.TrackStatus.point_index == point_num - 2) // 倒数第二个点
     {
-        Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
-                            point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+        // Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
+        //                     point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+        BaseChassis.Go2PointStatus.start = 0;
+        BaseChassis.Go2PointStatus.enable = 1;
+        Point2D_s tar;
+        tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
+        tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
+        Chassis_Go2Point(tar, point_sets[BaseChassis.TrackStatus.point_index].target_angle,
+                         0.5, 0.3);
     }
     else if (BaseChassis.TrackStatus.point_index == point_num - 1) // 最后一个点
     {
-        Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
-                            point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+        // Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
+        //                     point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+        BaseChassis.Go2PointStatus.start = 0;
+        BaseChassis.Go2PointStatus.enable = 1;
+        Point2D_s tar;
+        tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
+        tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
+        Chassis_Go2Point(tar, point_sets[BaseChassis.TrackStatus.point_index].target_angle,
+                         0.3, 0);
     }
-    else if (BaseChassis.TrackStatus.point_index == point_num)
+    else if (BaseChassis.TrackStatus.point_index == point_num) // 轨迹跟踪结束
     {
-        BaseChassis.TrackStatus.finished_track = 1;
-        uprintf_to(&huart2, "END\r\n");
+        BaseChassis.TrackStatus.finished = 1;
+
+        uprintf_to(&CHASSIS_MONITOR_UART, "END\r\n");
         uprintf("--Chassis|Finished tracking path!\r\n");
     }
 
@@ -507,23 +613,26 @@ void Chassis_TrackPathSets(int index)
         Chassis_TrackPath(points_pos2, points_pos2_num);
         break;
     case 3:
-        // Chassis_TrackPath(points_pos3, 81);
+        // Chassis_TrackPath(points_pos3, points_pos3_num);
         break;
 
     default:
-        uprintf("\r\n## TraceSetsIndexError! ##\r\n");
+        uprintf("\r\n## TraceSets Index Error! ##\r\n");
         break;
     }
 }
 
 /**
- * @brief 重置跟踪状态,用于开始跑轨迹的准备工作
+ * @brief 重置轨迹跟踪状态
  */
-void Chassis_ResetTrackStatus()
+void Chassis_TrackStatus_Reset()
 {
     BaseChassis.TrackStatus.point_index = 0;
-    BaseChassis.TrackStatus.begin_track = 1;
-    BaseChassis.TrackStatus.finished_track = 0;
+    BaseChassis.TrackStatus.start = 0;
+    BaseChassis.TrackStatus.finished = 0;
+    BaseChassis.ctrl_mode = CTRL_MODE_NONE;
+    YawPID.ctrl_max = 5.0;
+    // path_index不应在此函数中更改
     BaseChassis.target_speed = 0;
     //速度方向不应更改
     BaseChassis.target_omega = 0;
@@ -553,10 +662,10 @@ void Chassis_RemappingPathSetsSpeed(PlanPoint point_sets[], int point_num, doubl
     }
 }
 
-int PrintChassisStatus_Flag = 0; // 手柄或CMD控制开启
-void PrintChassisStatus()
+uint8_t Chassis_PrintPostureStatus_Flag = 0; // 手柄或CMD控制开启
+void Chassis_PrintPostureStatus()
 {
-    if (!(PrintChassisStatus_Flag && TimeFlag_20ms))
+    if (!(Chassis_PrintPostureStatus_Flag && TimeFlag_20ms))
         return;
     uprintf("--ChassisStatus|x:%7.3f y:%7.3f yaw:%5.2f vx:%5.2f vy:%5.2f omega:%5.2f\r\n",
             BaseChassis.PostureStatus.x, BaseChassis.PostureStatus.y,
@@ -571,7 +680,7 @@ void PrintChassisStatus()
 }
 
 int PrintTargetStatus_Flag = 0;
-void PrintTargetStatus()
+void Chassis_PrintTargetStatus()
 {
     if (!(PrintTargetStatus_Flag && TimeFlag_20ms))
         return;
@@ -596,8 +705,13 @@ void Chassis_YawTuning(float target_yaw)
     float now_yaw = BaseChassis.PostureStatus.yaw;
     float delta_angle = target_yaw - now_yaw;
     delta_angle = AngleLimitPI(delta_angle);
+
     target_yaw = now_yaw + delta_angle;
     float omega = PID_GetOutput(&YawPID, target_yaw, now_yaw);
+    if (fabs(delta_angle) < BaseChassis.yaw_ctrl_th)
+    {
+        omega = 0;
+    }
 
     BaseChassis.target_omega = omega;
     BaseChassis.target_speed = 0;
@@ -607,19 +721,19 @@ void Chassis_YawTuning(float target_yaw)
     }
 }
 
-void CAN_Callback_Locator_ReadPos_X(CAN_ConnMessage_s *data)
+void CAN_Callback_Location_ReadPos_X(CAN_ConnMessage_s *data)
 {
     location_raw_x = data->payload.fl[1];
     location_raw_speed_x = data->payload.fl[0];
 }
 
-void CAN_Callback_Locator_ReadPos_Y(CAN_ConnMessage_s *data)
+void CAN_Callback_Location_ReadPos_Y(CAN_ConnMessage_s *data)
 {
     location_raw_y = data->payload.fl[1];
     location_raw_speed_y = data->payload.fl[0];
 }
 
-void CAN_Callback_Locator_ReadPos_Yaw(CAN_ConnMessage_s *data)
+void CAN_Callback_Location_ReadPos_Yaw(CAN_ConnMessage_s *data)
 {
     float yaw = __ANGLE2RAD(data->payload.fl[1]);
     float temp_yaw = yaw + __ANGLE2RAD(90);

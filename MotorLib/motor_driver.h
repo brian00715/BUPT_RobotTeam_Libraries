@@ -10,8 +10,6 @@
 
 #include "can_utils.h"
 #include "main.h"
-#include "vesc_can.h"
-#include "odrive_can.h"
 
 typedef enum MTR_CTRL_MODE
 {
@@ -46,4 +44,4 @@ typedef struct MotorDriver_s
 void VESC_Exe();
 void MotorDriver_Init(MotorDriver_s *motor_driver, uint8_t can_id, MTR_CTRL_MODE mode);
 
-#endif //_MOTOR_DRIVER_H
+#endif // __MOTOR_DRIVER_H

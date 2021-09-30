@@ -10,7 +10,7 @@
  */
 #include "base_chassis.h"
 #include "omni_chassis.h"
-#include "common_config.h"
+#include "chassis_common_config.h"
 #include "can_utils.h"
 #include "utils.h"
 #include "handle.h"

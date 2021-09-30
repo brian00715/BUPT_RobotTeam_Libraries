@@ -203,6 +203,9 @@ void CMD_Add(char *cmd_name, char *cmd_usage, void (*cmd_func)(int argc, char *a
 char print_buffer[PRINT_BUFFER_SIZE];
 void uprintf(char *fmt, ...)
 {
+    // 等待DMA准备完毕
+    while (HAL_DMA_GetState(slib_cmd_huart->hdmatx) == HAL_DMA_STATE_BUSY)
+        HAL_Delay(1);
     int size;
     va_list arg_ptr;
     va_start(arg_ptr, fmt);
@@ -218,26 +221,24 @@ void uprintf(char *fmt, ...)
         HAL_Delay(10);
     }
     */
-    // 等待DMA准备完毕
-    while (HAL_DMA_GetState(slib_cmd_huart->hdmatx) == HAL_DMA_STATE_BUSY)
-        HAL_Delay(1);
+
     // TODO:	ZeroVoid	due:10/7	优化输出，异步输出，可能纯在busy时再次调用，会被忽略，输出缺失
     // while(CMD_UART.hdmatx->State != HAL_DMA_STATE_READY);
-    HAL_UART_Transmit(&CMD_UART, (uint8_t *)print_buffer, size, 0xffff);
-    // HAL_UART_Transmit_DMA(slib_cmd_huart, (uint8_t *)print_buffer, size);
+    // HAL_UART_Transmit(&CMD_UART, (uint8_t *)print_buffer, size, 0xffff);
+
+    HAL_UART_Transmit_DMA(slib_cmd_huart, (uint8_t *)print_buffer, size);
 }
 
 void uprintf_to(UART_HandleTypeDef *huart, char *fmt, ...)
 {
+    // 等待DMA准备完毕
+    while (HAL_DMA_GetState(slib_cmd_huart->hdmatx) == HAL_DMA_STATE_BUSY)
+        HAL_Delay(1);
     int size;
     va_list arg_ptr;
     va_start(arg_ptr, fmt);
     size = vsnprintf(print_buffer, PRINT_BUFFER_SIZE, fmt, arg_ptr);
     va_end(arg_ptr);
-
-    // 等待DMA准备完毕
-    while (HAL_DMA_GetState(slib_cmd_huart->hdmatx) == HAL_DMA_STATE_BUSY)
-        HAL_Delay(1);
 
     HAL_UART_Transmit_DMA(huart, (uint8_t *)print_buffer, size);
     // HAL_UART_Transmit(huart,(uint8_t *)print_buffer,size,1000);
