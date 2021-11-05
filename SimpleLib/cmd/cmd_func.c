@@ -1,9 +1,11 @@
 #include "cmd_func.h"
-// TODO 分离ChassisLib和SimpleLib 
+// TODO 分离ChassisLib和SimpleLib
 // #include "base_chassis.h"
 // #include "rm_cxxx_can.h"
 // #include "rudder_chassis.h"
 // #include "motor_driver.h"
+
+// #define USE_CHASSIS_CMD
 
 void CMD_Hello(int argc, char *argv[])
 {
@@ -125,57 +127,57 @@ void CMD_RMMtr_Ctrl(int argc, char *argv[])
     if (strcmp(argv[1], "motoron") == 0)
     {
         uprintf("motor%d is on\r\n", atoi(argv[2]));
-        MotorOn(CAN1, atoi(argv[2]));
+        DJIBoard_MotorOn(CAN1, atoi(argv[2]));
     }
     else if (strcmp(argv[1], "motoroff") == 0)
     {
         uprintf("motor%d is off\r\n", atoi(argv[2]));
-        MotorOff(CAN1, atoi(argv[2]));
+        DJIBoard_MotorOff(CAN1, atoi(argv[2]));
     }
     else if (strcmp(argv[1], "velcfg") == 0)
     {
         uprintf("motor%d's mode changes to velloopmode\r\n", atoi(argv[2]));
-        VelLoopCfg(CAN1, atoi(argv[2]), 0, 0);
+        DJIBoard_VelLoopCfg(CAN1, atoi(argv[2]), 0, 0);
     }
     else if (strcmp(argv[1], "poscfg") == 0)
     {
         uprintf("motor%d's mode changes to posLoopMode,maxv is %d\r\n", atoi(argv[2]), atoi(argv[3]));
-        PosLoopCfg(CAN1, atoi(argv[2]), 0, 0, atoi(argv[3]));
+        DJIBoard_PosLoopCfg(CAN1, atoi(argv[2]), 0, 0, atoi(argv[3]));
     }
     else if (strcmp(argv[1], "curcfg") == 0)
     {
         uprintf("motor%d's mode changes to curloopmode\r\n", atoi(argv[2]));
-        CurLoopCfg(CAN1, atoi(argv[2]));
+        DJIBoard_CurLoopCfg(CAN1, atoi(argv[2]));
     }
     else if (strcmp(argv[1], "velctr") == 0)
     {
         uprintf("motor%d's speed is set to %d\r\n", atoi(argv[2]), atoi(argv[3]));
-        DJI_VelCrl(CAN1, atoi(argv[2]), atoi(argv[3]));
+        DJIBoard_VelCrl(CAN1, atoi(argv[2]), atoi(argv[3]));
     }
     else if (strcmp(argv[1], "posctr") == 0)
     {
         uprintf("motor%d's pos is set to %d\r\n", atoi(argv[2]), atoi(argv[3]));
-        DJI_PosCtrl(CAN1, atoi(argv[2]), ABSOLUTE_MODE, atoi(argv[3]));
+        DJIBoard_PosCtrl(CAN1, atoi(argv[2]), ABSOLUTE_MODE, atoi(argv[3]));
     }
     else if (strcmp(argv[1], "curctr") == 0)
     {
         uprintf("motor%d's pos is set to %d\r\n", atoi(argv[2]), atoi(argv[3]));
-        CurCrl(CAN1, atoi(argv[2]), atoi(argv[3]));
+        DJIBoard_CurCrl(CAN1, atoi(argv[2]), atoi(argv[3]));
     }
     else if (strcmp(argv[1], "qcur") == 0)
     {
         uprintf("query for motor%d's cur\r\n", atoi(argv[2]));
-        ReadActualCur(CAN1, atoi(argv[2]));
+        DJIBoard_ReadActualCur(CAN1, atoi(argv[2]));
     }
     else if (strcmp(argv[1], "qpos") == 0) // 向东大驱动板发送查询CAN消息
     {
         uprintf("query for motor%d's pos\r\n", atoi(argv[2]));
-        DJI_ReadActualPos(CAN1, atoi(argv[2]));
+        DJIBoard_ReadActualPos(CAN1, atoi(argv[2]));
     }
     else if (strcmp(argv[1], "qvel") == 0)
     {
         uprintf("query for motor%d's vel\r\n", atoi(argv[2]));
-        ReadActualVel(CAN1, atoi(argv[2]));
+        DJIBoard_ReadActualVel(CAN1, atoi(argv[2]));
     }
     else if (strcmp(argv[1], "setallvel") == 0)
     {
@@ -192,7 +194,7 @@ void CMD_RMMtr_Ctrl(int argc, char *argv[])
             uprintf("%d ", vel[i]);
         }
         uprintf("\r\n");
-        DJI_velCtrAll(vel);
+        DJIBoard_VelCtrlAll(vel);
     }
     else if (strcmp(argv[1], "setallpos") == 0)
     {
@@ -209,7 +211,7 @@ void CMD_RMMtr_Ctrl(int argc, char *argv[])
             uprintf("%d ", pos[i]);
         }
         uprintf("\r\n");
-        DJI_PosCtrlAll(pos);
+        DJIBoard_PosCtrlAll(pos);
     }
     else if (strcmp(argv[1], "queryallpos") == 0)
     {
@@ -222,7 +224,7 @@ void CMD_RMMtr_Ctrl(int argc, char *argv[])
 /********************************END***********************************/
 
 /********************************[底盘控制]***********************************/
-#ifdef USE_CHASSISLIB
+#ifdef USE_CHASSIS_CMD
 extern float CMD_TargetSpeed;
 extern float CMD_TargetDir;
 extern float CMD_TargetOmega;
@@ -241,7 +243,7 @@ void CMD_Chassis_Teleop_Dec(int argc, char **argv)
 void CMD_Chassis_Teleop_GoAhead(int argc, char **argv)
 {
     CMD_TargetOmega = 0;
-    CMD_TargetSpeed += 0.01;
+    CMD_TargetSpeed = 0.05;
     CMD_TargetDir = 1.5708;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
@@ -249,20 +251,20 @@ void CMD_Chassis_Teleop_GoAhead(int argc, char **argv)
 void CMD_Chassis_Teleop_GoBack(int argc, char **argv)
 {
     CMD_TargetOmega = 0;
-    CMD_TargetSpeed -= 0.01;
-    CMD_TargetDir = 1.5708;
+    CMD_TargetSpeed = 0.05;
+    CMD_TargetDir = -1.5708;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_TurnLeft(int argc, char **argv)
 {
-    CMD_TargetOmega = 0.5;
+    CMD_TargetOmega += 0.5;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_TurnRight(int argc, char **argv)
 {
-    CMD_TargetOmega = -0.5;
+    CMD_TargetOmega -= 0.5;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
@@ -270,35 +272,20 @@ void CMD_Chassis_Teleop_Stop(int argc, char **argv)
 {
     CMD_TargetSpeed = 0;
     CMD_TargetOmega = 0;
-    RudderChassis.DriveMotors.motor_mode = MTR_CTRL_RPM;
-    for (int i = 0; i < 4; i++)
-    {
-        RudderChassis.DriveMotors.target_rpm[i] = 0;
-    }
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 
 void CMD_Chassis_Teleop_ShiftRight(int argc, char **argv)
 {
-    CMD_TargetDir -= __ANGLE2RAD(5);
+    CMD_TargetDir = 0;
+    CMD_TargetSpeed = 0.05;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
 }
 void CMD_Chassis_Teleop_ShiftLeft(int argc, char **argv)
 {
-    CMD_TargetDir += __ANGLE2RAD(5);
+    CMD_TargetDir = 3.14;
+    CMD_TargetSpeed = 0.05;
     uprintf("--Vel:%.2f, Dir:%.2f, Omega:%.2f\r\n", CMD_TargetSpeed, CMD_TargetDir, CMD_TargetOmega);
-}
-
-void CMD_Chassis_SetTargetPoint(int argc, char **argv)
-{
-    float x = atof(argv[1]);
-    float y = atof(argv[2]);
-    float yaw = atof(argv[3]);
-    CMD_Chassis_TargetPoint.x = x;
-    CMD_Chassis_TargetPoint.y = y;
-    CMD_Chassis_TargetYaw = yaw;
-    RudderChassis.base->TrackStatus.go2point_start = 1;
-    uprintf("CMD|Target point set to (%.2f,%.2f,,%.2f)\r\n", x, y, yaw);
 }
 
 /**
@@ -392,32 +379,6 @@ void CMD_SetYawPID(int argc, char **argv)
             kp, kd, ki, int_duty);
 }
 
-void CMD_SetDriveMotorsCurr(int argc, char **argv)
-{
-    RudderChassis.DriveMotors.target_curr[0] = atof(argv[1]);
-    RudderChassis.DriveMotors.target_curr[1] = atof(argv[2]);
-    RudderChassis.DriveMotors.target_curr[2] = atof(argv[3]);
-    RudderChassis.DriveMotors.target_curr[3] = atof(argv[4]);
-    uprintf("--CMD|Curr:[0]:%.2f [1]:%.2f [2]:%.2f [3]:%.2f\r\n",
-            RudderChassis.DriveMotors.target_curr[0],
-            RudderChassis.DriveMotors.target_curr[1],
-            RudderChassis.DriveMotors.target_curr[2],
-            RudderChassis.DriveMotors.target_curr[3]);
-}
-
-void CMD_SetDriveMotorsDuty(int argc, char **argv)
-{
-    RudderChassis.DriveMotors.target_duty[0] = atof(argv[1]);
-    RudderChassis.DriveMotors.target_duty[1] = atof(argv[2]);
-    RudderChassis.DriveMotors.target_duty[2] = atof(argv[3]);
-    RudderChassis.DriveMotors.target_duty[3] = atof(argv[4]);
-    uprintf("--CMD|duty:[0]:%.2f [1]:%.2f [2]:%.2f [3]:%.2f\r\n",
-            RudderChassis.DriveMotors.target_duty[0],
-            RudderChassis.DriveMotors.target_duty[1],
-            RudderChassis.DriveMotors.target_duty[2],
-            RudderChassis.DriveMotors.target_duty[3]);
-}
-
 /**
  * @brief 设置法向修正向量的PID参数
  */
@@ -483,7 +444,7 @@ void CMD_FuncInit(void)
     CMD_Add("rm", "", CMD_RMMtr_Ctrl);
     CMD_Add("SwitchPrintMotorStatus", "press to change ", CMD_SwitchPrintMotorStatus);
 #endif
-#ifdef USE_CHASSISLIB
+#ifdef USE_CHASSIS_CMD
     //chassis
     CMD_Add("ChangePosMode", "", CMD_ChangePosMode);
     CMD_Add("ChangeCtrlMode", "", CMD_ChangeCtrlMode);

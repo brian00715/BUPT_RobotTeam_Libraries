@@ -32,8 +32,8 @@ void SW_MotorInit(struct SW_DriveMotor_t *driver_motor, struct SW_SteerMotor_t *
         driver_motor->can_id[i] = i + VESC_ID_BASE; // 设置本杰明电调ID
         steer_motor->now_pos[i] = 0;
 
-        MotorOn(CAN1, i);
-        PosLoopCfg(CAN1, i, 0, 0, STEER_WHEEL_MAX_SPEED); // 舵向轮使用位置环模式
+        DJIBoard_MotorOn(CAN1, i);
+        DJIBoard_PosLoopCfg(CAN1, i, 0, 0, STEER_WHEEL_MAX_SPEED); // 舵向轮使用位置环模式
     }
     // 注册函数
     steer_motor->fSetPos = SW_SteerMotors_SetPos;
@@ -73,52 +73,52 @@ void SW_InitCalibration()
     int16_t stop[4] = {0};
     for (int i = 0; i < 4; i++)
     {
-        VelLoopCfg(CAN1, i + 1, 0, 0); // 配置速度环
+        DJIBoard_VelLoopCfg(CAN1, i + 1, 0, 0); // 配置速度环
     }
-    DJI_velCtrAll(speed); // 开始旋转
+    DJIBoard_VelCtrlAll(speed); // 开始旋转
     int16_t hall_switch_flag[4] = {0};
     while (1) // 四个都到位才退出循环
     {
         if (HAL_GPIO_ReadPin(HallSwitch1_GPIO_Port, HallSwitch1_Pin))
         {
-            DJI_VelCrl(CAN1, 1, 0);
+            DJIBoard_VelCrl(CAN1, 1, 0);
             hall_switch_flag[0] = 1;
         }
         else
         {
-            DJI_VelCrl(CAN1, 1, 400);
+            DJIBoard_VelCrl(CAN1, 1, 400);
             hall_switch_flag[0] = 0;
         }
 
         if (HAL_GPIO_ReadPin(HallSwitch2_GPIO_Port, HallSwitch2_Pin))
         {
-            DJI_VelCrl(CAN1, 2, 0);
+            DJIBoard_VelCrl(CAN1, 2, 0);
             hall_switch_flag[1] = 1;
         }
         else
         {
-            DJI_VelCrl(CAN1, 2, 400);
+            DJIBoard_VelCrl(CAN1, 2, 400);
             hall_switch_flag[1] = 0;
         }
 
         if (HAL_GPIO_ReadPin(HallSwitch3_GPIO_Port, HallSwitch3_Pin))
         {
-            DJI_VelCrl(CAN1, 3, 0);
+            DJIBoard_VelCrl(CAN1, 3, 0);
             hall_switch_flag[2] = 1;
         }
         else
         {
-            DJI_VelCrl(CAN1, 3, 400);
+            DJIBoard_VelCrl(CAN1, 3, 400);
             hall_switch_flag[2] = 0;
         }
         if (HAL_GPIO_ReadPin(HallSwitch4_GPIO_Port, HallSwitch4_Pin))
         {
-            DJI_VelCrl(CAN1, 4, 0);
+            DJIBoard_VelCrl(CAN1, 4, 0);
             hall_switch_flag[3] = 1;
         }
         else
         {
-            DJI_VelCrl(CAN1, 4, 400);
+            DJIBoard_VelCrl(CAN1, 4, 400);
             hall_switch_flag[3] = 0;
         }
         double result;
@@ -128,15 +128,15 @@ void SW_InitCalibration()
             break;
         }
     }
-    DJI_velCtrAll(stop);
+    DJIBoard_VelCtrlAll(stop);
     RudderChassis.base->ctrl_mode = CTRL_MODE_NONE;
     uprintf("--SW: SteerWheel Calibration Done!\r\n");
     Chassis_PostureStatusInit();
     Handle_Init();
     for (int i = 0; i < 4; i++)
     {
-        MotorOn(CAN1, i + 1);                                 // 使驱动板认为的瞬时角度值为0
-        PosLoopCfg(CAN1, i + 1, 0, 0, STEER_WHEEL_MAX_SPEED); // 更改到位置环模式
+        DJIBoard_MotorOn(CAN1, i + 1);                                 // 使驱动板认为的瞬时角度值为0
+        DJIBoard_PosLoopCfg(CAN1, i + 1, 0, 0, STEER_WHEEL_MAX_SPEED); // 更改到位置环模式
     }
 }
 
@@ -166,7 +166,7 @@ void SW_SteerMotors_SetPos(float target_pos[])
     {
         target_pos_int[i] = (int16_t)__RAD2ANGLE(target_pos[i]);
     }
-    DJI_PosCtrlAll(target_pos_int);
+    DJIBoard_PosCtrlAll(target_pos_int);
     RudderChassis.SteerMotors.can_send_flag = 0;
 }
 
@@ -295,7 +295,7 @@ void SW_SteerMotors_GetAngle()
 {
     for (int i = 0; i < 4; i++)
     {
-        DJI_ReadActualPos(CAN1, i + 1);
+        DJIBoard_ReadActualPos(CAN1, i + 1);
     }
 }
 

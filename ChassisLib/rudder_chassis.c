@@ -331,7 +331,7 @@ void RudderChassis_SingleCtrl(int index, float speed, float dir)
     __LIMIT(speed, DRIVE_WHEEL_MAX_SPEED);
     __LIMIT(dir, STEER_WHEEL_MAX_POS);
     //向驱动板发送命令
-    DJI_PosCtrl(CAN1, index, ABSOLUTE_MODE, (int32_t)__RAD2ANGLE(dir * STEER_WHEEL_REDUCTION_RATIO));
+    DJIBoard_PosCtrl(CAN1, index, ABSOLUTE_MODE, (int32_t)__RAD2ANGLE(dir * STEER_WHEEL_REDUCTION_RATIO));
     comm_can_set_rpm(RudderChassis.DriveMotors.can_id[index], speed);
 }
 
@@ -350,7 +350,7 @@ void RudderChassis_CtrlYaw(float yaw, uint32_t max_omega)
     }
     for (int i = 0; i < 4; i++) // 配置最大转度
     {
-        PosLoopCfg(CAN1, i + 1, 0, 0, max_omega);
+        DJIBoard_PosLoopCfg(CAN1, i + 1, 0, 0, max_omega);
         pos[i] = yaw;
     }
     RudderChassis.SteerMotors.fSetPos(pos);

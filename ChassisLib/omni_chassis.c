@@ -14,6 +14,7 @@
 #include "can_utils.h"
 #include "utils.h"
 #include "handle.h"
+#include "motor_driver.h"
 
 #ifdef USE_CHASSIS_OMNI
 
@@ -29,7 +30,7 @@ char MotorCANSendFlag = 0; // 需要在定时中断中置1，控制发送频率
  * @param target_dir rad
  * @param target_omega rad/s
  */
-void Omni_ChassisMove(float target_speed, float target_dir, float target_omega)
+void OmniChassis_Move(float target_speed, float target_dir, float target_omega)
 {
     LIMIT(target_speed, DRIVE_WHEEL_MAX_SPEED);
 
@@ -68,6 +69,18 @@ void Omni_ChassisMove(float target_speed, float target_dir, float target_omega)
 }
 
 /**
+ * @brief 三轮横辊子全向轮运动学
+ * 
+ * @param target_speed 
+ * @param target_dir 
+ * @param target_omega 
+ */
+void OmniChassis_Move_3Wheel(float target_speed, float target_dir, float target_omega)
+{
+
+}
+
+/**
  * @brief 初始化函数
  * 
  */
@@ -90,19 +103,18 @@ void OmniChassis_Init()
  */
 void OmniChassis_Exe()
 {
+    Chassis_UpdatePostureStatus();
     switch (OmniChassis.base->ctrl_mode)
     {
     case CTRL_MODE_NONE:
         break;
     case CTRL_MODE_HANDLE:
         Handle_Exe();
-        OmniChassis.base->fChassisMove(OmniChassis.base->target_speed, OmniChassis.base->target_dir, OmniChassis.base->target_omega); // 底层执行函数
         break;
     case CTRL_MODE_CMD:
         OmniChassis.base->target_speed = CMD_TargetSpeed;
         OmniChassis.base->target_dir = __ANGLE2RAD(CMD_TargetDir);
         OmniChassis.base->target_omega = CMD_TargetOmega;
-        OmniChassis.base->fChassisMove(OmniChassis.base->target_speed, OmniChassis.base->target_dir, OmniChassis.base->target_omega); // 底层执行函数
         break;
     case CTRL_MODE_TRACK:
         OmniChassis.base->pos_mode = POS_MODE_ABSOLUTE;
@@ -110,11 +122,11 @@ void OmniChassis_Exe()
         break;
     case CTRL_MODE_TUNING:
         Chassis_YawTuning(CMD_TargetYaw);
-        OmniChassis.base->fChassisMove(OmniChassis.base->target_speed, OmniChassis.base->target_dir, OmniChassis.base->target_omega); // 底层执行函数
         break;
     default:
         break;
     }
+    OmniChassis_Move(OmniChassis.base->target_speed, OmniChassis.base->target_dir, OmniChassis.base->target_omega); // 底层执行函数
 }
 
 #endif

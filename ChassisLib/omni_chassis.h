@@ -14,7 +14,7 @@ typedef struct OmniChassis_t
     char motor_can_flag; // 在定时中断中置1，控制can消息发送频率
 } OmniChassis_t;
 
-void Omni_ChassisMove(float target_speed, float target_dir, float target_omega);
+void Omnihassis_Move(float target_speed, float target_dir, float target_omega);
 void OmniChassis_Exe();
 void OmniChassis_Init();
 

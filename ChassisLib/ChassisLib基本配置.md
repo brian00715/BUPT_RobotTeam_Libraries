@@ -147,3 +147,25 @@ if (TimeFlag_1ms % 50 == 0) // 50ms=20hz
 1. 在CubeMX中配置一个用于通断继电器的GPIO引脚，并将`User Label`改为Relay。
 2. 在CubeMX中配置一个用于监视底盘轨迹的uart，并在`chassis_common_config.h`中更改**CHASSIS_MONITOR_UART**宏。
 
+## 5 可调参数
+
++ 偏航角控制PID参数：`YawPID`结构体
+
+  可通过串口命令行调参，调用`cmd_func.c/CMD_SetYawPID`函数。
+
++ 轨迹跟踪部分：
+
+  + 轨迹跟踪法向修正PID参数：`NormalCorrPID_x`、`NormalCorrPID_y`结构体。两个PID结构体的参数需要保持一致（当然也可以不一致，来实现x、y方向上不同程度的控制效果）。
+  + 轨迹跟踪过程中到达途径点的半径阈值：**PASSED_WAYPOINT_CIRCLE_TH**，当底盘距离当前期望点的距离小于该阈值时则认为已经到达该期望点。
+  + 最后3个点Go2Point的起始速度和终止速度。注意要和路径点集中的期望速度相匹配，否则最后3个点会突然加速或突然减速。
+
++ Go2Point部分：
+
+  + Go2Point模式下终点锁止PID参数：`LockPID`结构体。
+  + 速度规划过程中加速阶段和减速阶段所占比例，默认加速占0.1、减速占0.4。
+  + 速度规划时的最大速度：由`Chassis_Plan2PointSpeed()`的`max_speed`变量决定，该变量大小和期望点与起点的距离有关。距离越远，则认为中途的最大速度可以越大。缩放系数可调。
+  + 到达判断阈值：**ARRIVED_CIRCIE_TH**，值越小则越希望精准到达，但也可能带来振荡。
+  + 启用原地锁定PID的距离半径阈值：**LOCK_CIRCLE_TH**，值越小则越晚开启锁止PID。
+
+  
+

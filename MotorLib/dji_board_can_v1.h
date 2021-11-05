@@ -1,5 +1,5 @@
-#ifndef DJI_BOARD_CAN_H_
-#define DJI_BOARD_CAN_H_
+#ifndef DJI_BOARD_CAN_V1_H_
+#define DJI_BOARD_CAN_V1_H_
 
 #include "stm32f4xx.h"
 #include "main.h"
@@ -60,7 +60,7 @@ extern MotorType Motor[8];
 * @note ELMO驱动器默认初始状态为电机失能，使用电机时需要对其进行使能
 *       部分驱动器参数需要在电机失能状态下才可以配置
 */
-void MotorOn(CAN_TypeDef *CANx, uint8_t ElmoNum);
+void DJIBoard_MotorOn(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
 /**
 * @brief  电机失能（断电）
@@ -68,7 +68,7 @@ void MotorOn(CAN_TypeDef *CANx, uint8_t ElmoNum);
 * @param  ElmoNum：驱动器ID号，范围：0~128，0为广播用ID号
 * @author ACTION(migrate by LJ)
 */
-void MotorOff(CAN_TypeDef *CANx, uint8_t ElmoNum);
+void DJIBoard_MotorOff(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
 /**
 * @brief  驱动器速度环初始化
@@ -79,7 +79,7 @@ void MotorOff(CAN_TypeDef *CANx, uint8_t ElmoNum);
 * @author ACTION(migrate by LJ)
 * @note 在速度环初始化后才可以使能电机！！
 */
-void VelLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec);
+void DJIBoard_VelLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec);
 
 /**
 * @brief  驱动器位置环初始化
@@ -91,7 +91,7 @@ void VelLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec);
 * @author ACTION(migrate by LJ)
 * @note 在位置环初始化后才可以使能电机！！
 */
-void PosLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec, uint32_t vel);
+void DJIBoard_PosLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec, uint32_t vel);
 
 /**
 * @brief  驱动器电流环初始化
@@ -100,7 +100,7 @@ void PosLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec, 
 * @author LJ
 * @note 在电流环初始化后才可以使能电机！！
 */
-void CurLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum);
+void DJIBoard_CurLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
 /**
 * @brief  电机速度控制
@@ -109,7 +109,7 @@ void CurLoopCfg(CAN_TypeDef *CANx, uint8_t ElmoNum);
 * @param  vel: 速度，单位：脉冲每秒，范围：最小速度限制到最大速度限制
 * @author ACTION(migrate by LJ)
 */
-void DJI_VelCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
+void DJIBoard_VelCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
 
 /**
 * @brief  电机位置控制
@@ -121,7 +121,7 @@ void DJI_VelCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
 * @param  pos:位置命令，单位：脉冲，范围：最大位置限制到最小位置限制
 * @author ACTION(migrate by LJ)
 */
-void DJI_PosCtrl(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos);
+void DJIBoard_PosCtrl(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos);
 
 /**
 * @brief  电机电流控制
@@ -130,7 +130,7 @@ void DJI_PosCtrl(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t po
 * @param  cur:电流大小，单位mA,范围：3508:-20A~20A , 2006:-10A~10A
 * @author LJ
 */
-void CurCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t cur);
+void DJIBoard_CurCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t cur);
 
 /**
 * @brief  配置加速度与减速度
@@ -141,7 +141,7 @@ void CurCrl(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t cur);
 * @author ACTION(migrate by LJ)
 * @note
 */
-void SetAccAndDec(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec);
+void DJIBoard_SetAccAndDec(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec);
 
 /**
 * @brief  配置位置环运行最大速度
@@ -151,7 +151,7 @@ void SetAccAndDec(CAN_TypeDef *CANx, uint8_t ElmoNum, uint32_t acc, uint32_t dec
 * @author ACTION(migrate by LJ)
 * @note：速度正负号代表旋转的方向，大于零为正方向，小于零为负方向
 */
-void SetPosLoopVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
+void DJIBoard_SetPosLoopVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
 
 /**
 * @brief  配置驱动器工作模式
@@ -166,7 +166,7 @@ void SetPosLoopVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
 * @author ACTION(migrate by LJ)
 * @note 只有在电机失能时可以配置该参数
 */
-void SetUnitMode(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t unitMode);
+void DJIBoard_SetUnitMode(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t unitMode);
 
 /**
 * @brief  配置运行速度
@@ -176,7 +176,7 @@ void SetUnitMode(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t unitMode);
 * @author ACTION(migrate by LJ)
 * @note：速度正负号代表旋转的方向，大于零为正方向，小于零为负方向
 */
-void SetJoggingVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
+void DJIBoard_SetJoggingVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
 
 /**
 * @brief  配置位置环命令
@@ -189,7 +189,7 @@ void SetJoggingVel(CAN_TypeDef *CANx, uint8_t ElmoNum, int32_t vel);
 * @author ACTION(migrate by LJ)
 * @note：位置正负号代表旋转的方向，大于零为正方向，小于零为负方向
 */
-void SendPosCmd(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos);
+void DJIBoard_SendPosCmd(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos);
 
 /**********************************特殊控制指令*******************************************/
 
@@ -199,7 +199,7 @@ void SendPosCmd(CAN_TypeDef *CANx, uint8_t ElmoNum, uint8_t posMode, int32_t pos
  * @param vel 四个速度的数组
  * @author LJunius
  */
-void DJI_velCtrAll(int16_t vel[4]);
+void DJIBoard_VelCtrlAll(int16_t vel[4]);
 
 /**
  * @brief 一条CAN消息同时控制四个电机位置环
@@ -207,7 +207,7 @@ void DJI_velCtrAll(int16_t vel[4]);
  * @param pos 四个位置的数组
  * @author LJunius
  */
-void DJI_PosCtrlAll(int16_t pos[4]);
+void DJIBoard_PosCtrlAll(int16_t pos[4]);
 
 /**********************************读取驱动器数据命令*************************************/
 
@@ -218,7 +218,7 @@ void DJI_PosCtrlAll(int16_t pos[4]);
 * @author ACTION(migrate by LJ)
  * @note：接收标识符为：0x00005850
 */
-void DJI_ReadActualPos(CAN_TypeDef *CANx, uint8_t ElmoNum);
+void DJIBoard_ReadActualPos(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
 /**
 * @brief  读取电机速度
@@ -227,7 +227,7 @@ void DJI_ReadActualPos(CAN_TypeDef *CANx, uint8_t ElmoNum);
 * @author ACTION(migrate by LJ)
  * @note：接收标识符为：0x00005856
 */
-void ReadActualVel(CAN_TypeDef *CANx, uint8_t ElmoNum);
+void DJIBoard_ReadActualVel(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
 /** 
 * @brief  读取电机电流
@@ -236,9 +236,9 @@ void ReadActualVel(CAN_TypeDef *CANx, uint8_t ElmoNum);
 * @author ACTION(migrate by LJ)
 * @note：接收标识符为：0x00005858
 */
-void ReadActualCur(CAN_TypeDef *CANx, uint8_t ElmoNum);
+void DJIBoard_ReadActualCur(CAN_TypeDef *CANx, uint8_t ElmoNum);
 
-void CAN_Callback_DJI_ReadInfo(CAN_ConnMessage_s *data);
-void CAN_Callback_DJI_ReadAllPosInfo(CAN_ConnMessage_s *data);
+void CAN_Callback_DJIBoard_ReadInfo(CAN_ConnMessage_s *data);
+void CAN_Callback_DJIBoard_ReadAllPosInfo(CAN_ConnMessage_s *data);
 
 #endif

@@ -3,13 +3,14 @@
 
 /* 对外接口-----------------------------------------*/
 // 使用什么驱动器
-// #define USE_MTR_DRIVER_ODRIVE
-#define USE_MTR_DRIVER_VESC
-#define USE_MTR_DRIVER_DJI_BOARD // 一次控制四个电机的大疆驱动板
-// #define USE_MTR_DRIVER_RM_CXXX // C610/620电调
+// #define USE_MTR_DRIVER_ODRIVE       // ODrive驱动器
+#define USE_MTR_DRIVER_VESC         // VESC驱动器
+#define USE_MTR_DRIVER_DJI_BOARD_V1 // 一次控制四个电机的大疆驱动板
+// #define USE_MTR_DRIVER_DJI_BOARD_V2 // 使用V2版时务必配合OSLib一起使用
+#define USE_MTR_DRIVER_DRIVER_PRO   // BUPT自研黑色驱动卡
+// #define USE_MTR_DRIVER_RM_CXXX      // C610/620电调
 
 #include "can_utils.h"
-#include "main.h"
 
 typedef enum MTR_CTRL_MODE
 {

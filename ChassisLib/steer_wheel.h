@@ -18,7 +18,7 @@ extern "C"
 #include "main.h"
 #include "simplelib.h"
 #include "can_utils.h"
-#include "dji_board_can.h"
+#include "dji_board_can_v1.h"
     //=================================宏和枚举类=================================
 
     //=================================结构体=================================

@@ -1,9 +1,9 @@
 /**
  * @file base_chassis.c
  * @author simon
- * @brief 底盘基类
- * @version 1.0
- * @date 2021-07-10
+ * @brief 底盘基类实现
+ * @version 1.2
+ * @date 2021-11-06
  * 
  * @copyright Copyright (c) 2021
  * 
@@ -16,10 +16,12 @@
 #include "omni_chassis.h"
 #include "steer_wheel.h"
 
-#define ARRIVED_CIRCIE_TH (0.007) // m 到达半径阈值
-#define LOCK_CIRCLE_TH (0.2)      // m 启用原地锁定PID的距离半径阈值
+#define ARRIVED_CIRCIE_TH (0.005)        // m 到达半径阈值
+#define LOCK_CIRCLE_TH (0.2)             // m 启用原地锁定PID的距离半径阈值
+#define PASSED_WAYPOINT_CIRCLE_TH (0.05) // m 轨迹跟踪过程中到达途径点的半径阈值
 
-BaseChassis_s BaseChassis; // 基类对象，子类继承时引用其指针
+BaseChassis_s BaseChassis; // 底盘基类对象，是全局变量，子类继承时引用其指针
+/* 串口所用全局变量----------------------------------------------*/
 float CMD_TargetSpeed = 0;
 float CMD_TargetDir = 0;
 float CMD_TargetOmega = 0;
@@ -35,6 +37,7 @@ PID_s Chassis_OmegaCtrlPID = {0};
 PID_s YawPID = {0};
 PID_s LockPID = {0}; // 跑点模式锁止PID
 
+/* 从全场定位CAN中断读取到的原始坐标值------------------------------*/
 static float location_raw_x, location_raw_y,
     location_raw_speed_x, location_raw_speed_y;
 
@@ -139,7 +142,7 @@ void Chassis_PostureStatusInit()
 }
 
 /** 
-  * @brief 由用户实现 | 更新底盘位姿状态
+  * @brief 由用户实现 | 更新底盘位姿状态,将全场定位读取到的原始坐标值换算为机器人坐标系下的坐标值
   * @note  此函数调用频率不应低于里程计坐标发布频率
   */
 void Chassis_UpdatePostureStatus()
@@ -155,6 +158,8 @@ void Chassis_UpdatePostureStatus()
     // BaseChassis.PostureStatus.last_yaw = BaseChassis.PostureStatus.yaw;
 
     // >>>以下为BUPT全场定位使用<<< （请根据实际安装方式换算）
+    // 换算示例（全场定位坐标系与机器人坐标系存在45°夹角）👇
+    /* -----------------------------------------------------
     BaseChassis.PostureStatus.x =
         -location_raw_x * cos(__ANGLE2RAD(45)) -
         location_raw_y * cos(__ANGLE2RAD(45));
@@ -162,19 +167,13 @@ void Chassis_UpdatePostureStatus()
         location_raw_x * cos(__ANGLE2RAD(45)) -
         location_raw_y * cos(__ANGLE2RAD(45));
 
-    float tmp = BaseChassis.PostureStatus.y;
-    BaseChassis.PostureStatus.y = BaseChassis.PostureStatus.x + BaseChassis.PostureStatus.pos_corr_y;
-    BaseChassis.PostureStatus.x = -tmp + BaseChassis.PostureStatus.pos_corr_x;
-
     BaseChassis.PostureStatus.speed_x =
         -location_raw_speed_x * cos(__ANGLE2RAD(45)) -
         location_raw_speed_y * cos(__ANGLE2RAD(45));
     BaseChassis.PostureStatus.speed_y =
         -location_raw_speed_x * cos(__ANGLE2RAD(45)) +
         location_raw_speed_y * cos(__ANGLE2RAD(45));
-    tmp = BaseChassis.PostureStatus.speed_y;
-    BaseChassis.PostureStatus.speed_y = BaseChassis.PostureStatus.speed_x;
-    BaseChassis.PostureStatus.speed_x = tmp;
+    ---------------------------------------------------    */
 }
 
 /**
@@ -252,7 +251,7 @@ void Chassis_Go2Point(Point2D_s target, float target_yaw, float start_spd, float
     if (BaseChassis.Go2PointStatus.start == 1) // 保存起点
     {
         BaseChassis.Go2PointStatus.start = 0;
-        BaseChassis.Go2PointStatus.start_point.x = BaseChassis.PostureStatus.x;
+        BaseChassis.Go2PointStatus.start_point.x = BaseChassis.PostureStatus.x; // 将此时的坐标值作为起点
         BaseChassis.Go2PointStatus.start_point.y = BaseChassis.PostureStatus.y;
         BaseChassis.Go2PointStatus.arrived = 0;
     }
@@ -281,13 +280,9 @@ void Chassis_Go2Point(Point2D_s target, float target_yaw, float start_spd, float
         }
         BaseChassis.target_dir = AngleBetweenPoints(BaseChassis.PostureStatus.x,
                                                     BaseChassis.PostureStatus.y, target.x, target.y);
-        tmp_speed = Chassis_Plan2PointSpeed(BaseChassis.Go2PointStatus.start_point, target, start_spd, end_spd, 0.4, 0.4);
+        tmp_speed = Chassis_Plan2PointSpeed(BaseChassis.Go2PointStatus.start_point, target, start_spd, end_spd, 0.1, 0.4);
         __LIMIT_FROM_TO(tmp_speed, BaseChassis.Go2PointStatus.min_speed, BaseChassis.Go2PointStatus.max_speed);
         // BaseChassis.handbrake_flag = 0;
-        // if (TimeFlag_50ms)
-        // {
-        //     uprintf("distance:%7.3f spd:%6.3f\r\n", distance, tmp_speed);
-        // }
     }
     else
     {
@@ -300,7 +295,6 @@ void Chassis_Go2Point(Point2D_s target, float target_yaw, float start_spd, float
             tmp_omega = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
             BaseChassis.target_dir = AngleBetweenPoints(BaseChassis.PostureStatus.x,
                                                         BaseChassis.PostureStatus.y, target.x, target.y);
-            // uprintf("Go2Point|pid circle, spd:%6.3f\r\n", tmp_speed);
         }
         else // 到达
         {
@@ -353,7 +347,7 @@ float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
     float total_distance = sqrtf(pow((target.x - start.x), 2) + pow((target.y - start.y), 2));
     float distance_offset = fabs(total_distance - distance_to_target); //与起点的距离
     float speed = 0;
-    float max_speed = 0.45 * total_distance; // 根据距离缩放速度 0.6 太快
+    float max_speed = 0.45 * total_distance; // 根据距离缩放速度，参数可调
     if (acc_ratio < 1e-4)                    // 纯减速过程
     {
         max_speed = start_speed;
@@ -383,6 +377,10 @@ float Chassis_Plan2PointSpeed(Point2D_s start, Point2D_s target,
     return speed;
 }
 
+/**
+ * @brief 重置Go2Point状态
+ * 
+ */
 void Chassis_Go2Point_Reset()
 {
     BaseChassis.Go2PointStatus.start = 0;
@@ -402,7 +400,7 @@ void Chassis_Go2Point_Reset()
 }
 
 /**
- * @brief 底盘轨迹跟踪中层：计算法向修正向量
+ * @brief 底盘轨迹跟踪中层：计算轨迹法向修正向量
  * @param now_speed_vec 当前速度
  * @param target_speed_vec 目标速度
  * @param distance_vec 位移向量
@@ -418,10 +416,10 @@ void Chassis_TrackVector(vec now_speed_vec, vec target_speed_vec,
     }
     else
     {
-        double project = fabs(Vec_DotProduct(now_pos2next_target, distance_vec)) / Vec_Model(now_pos2next_target); //投影长度
+        double project = fabs(Vec_DotProduct(now_pos2next_target, distance_vec)) / Vec_Model(now_pos2next_target); // 投影长度
         vec project_vec = Vec_ScalarMul(now_pos2next_target, project / Vec_Model(now_pos2next_target));            // 投影向量
         vec corr_vec = Vec_Add(distance_vec, project_vec);                                                         // 法向修正向量
-        Vec_ScalarMul(corr_vec, 1.0);                                                                              // 使距离修正与速度大小相关联
+        Vec_ScalarMul(corr_vec, 1.0);                                                                              // 使根据距离偏差计算出的修正向量模值（单位m）变换到速度的统一数量级（单位m/s），参数可调                                                                // 使距离修正与速度大小相关联
         // 对法向偏差进行控制
         float corr_vec_ctrl_x = -PID_GetOutput(&NormalCorrPID_x, 0, corr_vec.x); // 需要使用两个PID结构体，否则last变量会被重用
         float corr_vec_ctrl_y = -PID_GetOutput(&NormalCorrPID_y, 0, corr_vec.y);
@@ -431,11 +429,11 @@ void Chassis_TrackVector(vec now_speed_vec, vec target_speed_vec,
         float delta_angle = target_yaw - BaseChassis.PostureStatus.yaw;
         delta_angle = AngleLimitPI(delta_angle);
         target_yaw = BaseChassis.PostureStatus.yaw + delta_angle;
-        float omega_ctrl = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw); // 暂时不加入角速度内环
+        float omega_ctrl = PID_GetOutput(&YawPID, target_yaw, BaseChassis.PostureStatus.yaw);
 
         // 设置全局目标，交给ChassisMove函数执行
         float speed_out = (float)Vec_Model(velocity_out);
-        __LIMIT_FROM_TO(speed_out, 0.01, DRIVE_WHEEL_MAX_SPEED);
+        __LIMIT_FROM_TO(speed_out, 0.0, DRIVE_WHEEL_MAX_SPEED);
         BaseChassis.target_speed = speed_out;
         BaseChassis.target_dir = atan2(velocity_out.y, velocity_out.x);
         BaseChassis.target_omega = omega_ctrl;
@@ -504,10 +502,10 @@ int Chassis_TrackPath(const PlanPoint point_sets[], unsigned int point_num)
     if (TimeFlag_50ms)
     {
         // 通过串口向PC发送轨迹点，用python读取串口信息并绘图
-        uprintf_to(&CHASSIS_MONITOR_UART, "track: %.2f %.2f %.2f %.2f\r\n",
-                   BaseChassis.PostureStatus.x, BaseChassis.PostureStatus.y,
-                   point_sets[BaseChassis.TrackStatus.point_index].x,
-                   point_sets[BaseChassis.TrackStatus.point_index].y);
+        // uprintf_to(&CHASSIS_MONITOR_UART, "track: %.2f %.2f %.2f %.2f\r\n",
+        //            BaseChassis.PostureStatus.x, BaseChassis.PostureStatus.y,
+        //            point_sets[BaseChassis.TrackStatus.point_index].x,
+        //            point_sets[BaseChassis.TrackStatus.point_index].y);
 
         uprintf("[%d] (%.3f,%.3f)->(%.3f,%.3f) tar_spe:%.2f tar_dir:%.2f\r\n",
                 BaseChassis.TrackStatus.point_index,
@@ -522,12 +520,14 @@ int Chassis_TrackPath(const PlanPoint point_sets[], unsigned int point_num)
         vec forehead = Vec_Create(cos(BaseChassis.target_dir), sin(BaseChassis.target_dir)); // 当前期望速度方向向量
         if (Vec_DotProduct(now_pos2now_target, now_target2last_target) < 0 ||
             Vec_DotProduct(forehead, now_pos2now_target) < 0 || // 经测试，不用距离阈值判断也可以
-            distance_to_next <= 0.05)
+            distance_to_next <= PASSED_WAYPOINT_CIRCLE_TH)
         {
-            BaseChassis.TrackStatus.point_index++;                                  // 指向下一个点
-            BaseChassis.Go2PointStatus.start_point.x = BaseChassis.PostureStatus.x; // 除了倒数3个点，这两行赋值应是无效的
-            BaseChassis.Go2PointStatus.start_point.y = BaseChassis.PostureStatus.y;
-            BaseChassis.Go2PointStatus.enable = 0;
+            BaseChassis.TrackStatus.point_index++;                    // 更新期望点
+            if (BaseChassis.TrackStatus.point_index >= point_num - 3) // 最后3个点
+            {
+                BaseChassis.Go2PointStatus.start = 1;
+                BaseChassis.Go2PointStatus.enable = 1;
+            }
         }
     }
     else // 最后一个点的经过逻辑不同
@@ -545,23 +545,24 @@ int Chassis_TrackPath(const PlanPoint point_sets[], unsigned int point_num)
     }
     else if (BaseChassis.TrackStatus.point_index == point_num - 3) // 倒数第三个点
     {
-        Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
-                            point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+        // >>>根据实际情况自由决定最后3个点使用什么跑法，注释/取消注释相应的代码
 
-        // BaseChassis.Go2PointStatus.start = 0; // 避免一直更新起点
-        // BaseChassis.Go2PointStatus.enable = 1;
-        // Point2D_s tar;
-        // tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
-        // tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
-        // Chassis_Go2Point(tar, point_sets[BaseChassis.TrackStatus.point_index].target_angle,
-        //                  0.5, 0.4);
+        // 使用正常跑点逻辑
+        // Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
+        //                     point_sets[BaseChassis.TrackStatus.point_index].target_angle);
+
+        // 使用GoToPoint逻辑
+        Point2D_s tar;
+        tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
+        tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
+        Chassis_Go2Point(tar, point_sets[BaseChassis.TrackStatus.point_index].target_angle,
+                         0.5, 0.4); // 起始速度、终止速度参数可调
     }
     else if (BaseChassis.TrackStatus.point_index == point_num - 2) // 倒数第二个点
     {
         // Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
         //                     point_sets[BaseChassis.TrackStatus.point_index].target_angle);
-        BaseChassis.Go2PointStatus.start = 0;
-        BaseChassis.Go2PointStatus.enable = 1;
+
         Point2D_s tar;
         tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
         tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
@@ -572,8 +573,7 @@ int Chassis_TrackPath(const PlanPoint point_sets[], unsigned int point_num)
     {
         // Chassis_TrackVector(now_speed_vec, target_speed_vec, now_pos2next_target, now_pos2now_target,
         //                     point_sets[BaseChassis.TrackStatus.point_index].target_angle);
-        BaseChassis.Go2PointStatus.start = 0;
-        BaseChassis.Go2PointStatus.enable = 1;
+
         Point2D_s tar;
         tar.x = point_sets[BaseChassis.TrackStatus.point_index].x;
         tar.y = point_sets[BaseChassis.TrackStatus.point_index].y;
@@ -583,8 +583,7 @@ int Chassis_TrackPath(const PlanPoint point_sets[], unsigned int point_num)
     else if (BaseChassis.TrackStatus.point_index == point_num) // 轨迹跟踪结束
     {
         BaseChassis.TrackStatus.finished = 1;
-
-        uprintf_to(&CHASSIS_MONITOR_UART, "END\r\n");
+        // uprintf_to(&CHASSIS_MONITOR_UART, "END\r\n");
         uprintf("--Chassis|Finished tracking path!\r\n");
     }
 
@@ -672,11 +671,6 @@ void Chassis_PrintPostureStatus()
             BaseChassis.PostureStatus.yaw,
             BaseChassis.PostureStatus.speed_x, BaseChassis.PostureStatus.speed_y,
             BaseChassis.PostureStatus.omega);
-
-    // float scope_arr[3] = {BaseChassis.PostureStatus.speed_x, BaseChassis.PostureStatus.speed_y, BaseChassis.PostureStatus.omega};
-    // toolBox_scope(scope_arr, 3);
-    // float scope_arr[3] = {BaseChassis.target_omega, BaseChassis.PostureStatus.omega, BaseChassis.omega_ctrl};
-    // toolBox_scope(scope_arr, 3);
 }
 
 int PrintTargetStatus_Flag = 0;
@@ -736,7 +730,7 @@ void CAN_Callback_Location_ReadPos_Y(CAN_ConnMessage_s *data)
 void CAN_Callback_Location_ReadPos_Yaw(CAN_ConnMessage_s *data)
 {
     float yaw = __ANGLE2RAD(data->payload.fl[1]);
-    float temp_yaw = yaw + __ANGLE2RAD(90);
+    float temp_yaw = yaw + __ANGLE2RAD(90); // 让全场定位上电后，车头正方向是90°
     if (temp_yaw < 0)
     {
         temp_yaw += 2 * PI;
